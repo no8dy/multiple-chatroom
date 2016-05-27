@@ -1,15 +1,21 @@
+#define FILEROUTE sprintf(fileroute,"~/chat_history/%s",myname);
+#define DATAROUTE "~/chat_history/"
 #include<curses.h> /* add stdio.h automatically */
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<stdlib.h>
 #include<sys/types.h>
+#include<sys/stat.h>
 #include<string.h>
 #include<strings.h>
 #include<math.h>
 #include<pthread.h>
 #include<signal.h>
 #define CLIENTNUM 21//one for root
+struct stat route;
 void storehistory(void);
+char command[350];
+char fileroute[40];
 //function for curses
 void initial(void);
 void special(int attrs,WINDOW *swin,int y,int x,char *text);
@@ -42,11 +48,12 @@ int memberlist[CLIENTNUM+1]={[0]=0};//point client array (sorted)
 int online=0;//the num people on line
 char buffer0[310];//to receive msg
 char myname[11];
+char curname[20];
 char receivername[11]={"All"};
 int serverfd;
 int clientfd;
 int PORT;
-char IP[17];
+char IP[25];
 int ch;
 char non;//for getchar nothing
 int root=0;// whether you have root competence
@@ -76,7 +83,7 @@ int main(){
 			myname[i]='\0';
 		}
 	}
-
+	strcpy(curname,myname);
 	setbuf(stdin,NULL);
 
 	if(climission()==-1){
@@ -93,9 +100,18 @@ int main(){
 		exit(1);
 	}
 
-	sprintf(output,"name %s",myname);
+	sprintf(output,"name %s",curname);
 	send(serverfd,output,sizeof(output),0);
-//
+	FILEROUTE//SIGN fileroute
+	// build history data
+	if(stat(DATAROUTE,&route)==0){
+		sprintf(command,"mkdir %s",DATAROUTE);
+		system(command);
+	}
+	sprintf(command,"date >> %s",fileroute);
+	system(command);
+	sprintf(command,"echo \"connected to %s:%d\" >> %s",IP,PORT,fileroute);
+	system(command);
 	// start curses terminal
 
 	int hch;//rootwin ch for getch
@@ -148,13 +164,16 @@ int main(){
 			printf("terminal ERR\n");
 			escape(0);
 		}
-		if(strcmp(receivername,"All")==0){
-			sprintf(stroutput,"wall %s",string);
+		if(string[0]!='\0'){
+			if(strcmp(receivername,"All")==0){
+				sprintf(stroutput,"wall %s",string);
+			}
+			else{
+				sprintf(stroutput,"write %s %s",receivername,string);
+			}
+			send(serverfd,stroutput,sizeof(stroutput),0);
 		}
-		else{
-			sprintf(stroutput,"write %s %s",receivername,string);
-		}
-		send(serverfd,stroutput,sizeof(stroutput),0);
+		memset(string,0,sizeof(string));
 		wclear(win[1]);
 		mvwprintw(win[6],1,1,"%c",pointer);
 		wrefresh(win[6]);
@@ -199,6 +218,8 @@ void recemsg(void){
 		else if(len>=1){
 			sscanf(buffer0,"%s",mod);
 			if(strcmp(mod,"public")==0){
+//		mvwprintw(win[3],0,18,"%d",i++);	
+//		wrefresh(win[3]);
 				sscanf(buffer0,"%*s %s %[^\n]",sendername,string);
 				sprintf(output,"%s:%s",sendername,string);
 			}
@@ -207,18 +228,19 @@ void recemsg(void){
 				sprintf(output,"%s",string);
 			}
 			else if(strcmp(mod,"pw")==0){
-					sscanf(buffer0,"%*s %[^\n]",string);
-					if(strcmp(string,"accept")==0){
-						root=1;
-						pointer='#';
-						if(curwin==win[4]){
-							mvwprintw(win[4],win[4]->_cury,2,"%c",pointer);
-							wrefresh(win[4]);
-						}
+				sscanf(buffer0,"%*s %[^\n]",string);
+				if(strcmp(string,"accept")==0){
+					root=1;
+					pointer='#';
+					if(curwin==win[4]){
+						mvwprintw(win[4],win[4]->_cury,2,"%c",pointer);
+						wrefresh(win[4]);
 					}
-					else{
-						root=0;
-					}
+				}
+				else{
+					root=0;
+				}
+				continue;
 			}
 			else if(strcmp(mod,"sys")==0){
 				sscanf(buffer0,"%*s %[^\n]",string);
@@ -244,7 +266,14 @@ void recemsg(void){
 			}
 			else{
 				mvwaddstr(win[0],localine,0,output);
-			}	
+			}
+			if(curline==300){
+				for(i=0;i<300;i++){
+					sprintf(command,"echo \"%s\" >> %s",history[i],fileroute);
+					system(command);
+				}
+				curline=0;
+			}
 			strcpy(history[curline],output);
 			for(i=0;i<(strlen(output)/(win[0]->_maxx+1));i++){
 				localine++;
@@ -319,9 +348,21 @@ int climission(void){
 
 	struct sockaddr_in dest0;
 	/* input IP */
-	sprintf(IP,"127.0.0.1");
 
-	/* input port */
+	puts("Input IP(enter local default):");
+	fgets(IP,sizeof(IP),stdin);
+	if(IP[0]=='\n'){	
+		sprintf(IP,"127.0.0.1");
+	}
+	if(strcmp(IP,"ghost\n")==0){
+		strcpy(IP,"140.119.162.225");
+	}
+	if(strcmp(IP,"cherry\n")==0){
+		strcpy(IP,"140.119.162.51");
+	}
+	setbuf(stdin,NULL);
+	printf("will connect to %s\n",IP);
+	/* input port */	
 	printf("Input port(ex:8889):");
 	scanf("%d",&PORT);
 
@@ -419,7 +460,7 @@ void redraw(int mod){
 	}
 	mvwprintw(win[3],0,4,"Hi!");
 	mvwprintw(win[3],0,7,"          ");
-	special(A_BOLD,win[3],0,7,myname);
+	special(A_BOLD,win[3],0,7,curname);
 
 	touchwin(win[0]);
 	wrefresh(win[0]);
@@ -529,7 +570,7 @@ int terminal(WINDOW *twin,char *str,int n)
 			wrefresh(win[1]);
 
 		}
-		else if(c==4){
+		else if(c==14){
 			if(pointer=='$'){
 				pointer='>';
 			}
@@ -726,7 +767,7 @@ void rootmod(void){
 	static int hide=0;
 	static int hideroot=1;
 	static int rootID=0;
-	static char changename[20]={"root"};
+//	static char changename[20]={"root"};
 	curwin=rootwin;
 	rooting=1;
 	wclear(rootwin);
@@ -737,7 +778,7 @@ void rootmod(void){
 		wrefresh(rootwin);
 	}
 	else if(root==1){
-		mvwprintw(rootwin,1,5,"Change ID as %s",changename);
+		mvwprintw(rootwin,1,5,"Change ID as %s",strcmp(curname,myname)==0?"root":myname);
 		if(hide==0)
 			mvwprintw(rootwin,2,5,"Hide my ID");
 		if(hide==1)
@@ -750,7 +791,7 @@ void rootmod(void){
 		mvwprintw(rootwin,5,5,"Shutdown server");
 		mvwprintw(rootwin,6,5,"Logout root");
 		mvwprintw(rootwin,7,5,"Exit");
-		mvwprintw(rootwin,8,9,"Cur_ID:%s",myname);
+		mvwprintw(rootwin,8,9,"Cur_ID:%s",curname);
 		wrefresh(rootwin);
 	}
 	wrefresh(rootwin);
@@ -766,6 +807,7 @@ void rootmod(void){
 			send(serverfd,output,sizeof(output),0);
 			curs_set(0);
 			mvwprintw(rootwin,rootwin->_maxy-1,2,"Please wait");
+			wrefresh(rootwin);
 			sleep(1);
 		}
 	}
@@ -781,19 +823,22 @@ void rootmod(void){
 				if(selecter==1){//change ID as root
 					if(rootID==0){
 						rootID=1-rootID;
-						strcpy(changename,myname);
-						strcpy(myname,"root");
+						strcpy(curname,"root");
 						send(serverfd,"change root",sizeof("change root"),0);
 					}
-					if(rootID==1){
+					else if(rootID==1){
 						rootID=1-rootID;
-						strcpy(myname,changename);
-						strcpy(changename,"root");
+						strcpy(curname,myname);
+						send(serverfd,"change old",sizeof("change old"),0);
 					}
 					mvwprintw(rootwin,1,5,"Change ID as         ");//%*c",sizeof(myname),' ');
 					mvwprintw(rootwin,8,9,"Cur_ID:         ");//",sizeof(changename),' ');
-					mvwprintw(rootwin,1,5,"Change ID as %s",changename);
-					mvwprintw(rootwin,8,9,"Cur_ID:%s",myname);
+					mvwprintw(rootwin,1,5,"Change ID as %s",strcmp(curname,myname)==0?"root":myname);
+					mvwprintw(rootwin,8,9,"Cur_ID:%s",curname);	
+					mvwprintw(win[3],0,4,"Hi!");
+					mvwprintw(win[3],0,7,"          ");
+					special(A_BOLD,win[3],0,7,curname);
+					wrefresh(win[3]);
 					wrefresh(rootwin);
 				}
 				else if(selecter==2){
@@ -835,8 +880,7 @@ void rootmod(void){
 				else if(selecter==6){//logout
 					if(rootID==1){
 						rootID=0;
-						strcpy(myname,changename);
-						strcpy(changename,"root");
+						strcpy(curname,myname);
 					}
 					if(hide==1){
 						hide=0;
@@ -877,6 +921,12 @@ void rootmod(void){
 	return;
 }
 void storehistory(void){
+	int i;
+	for(i=0;i<curline;i++){
+		sprintf(command,"echo \"%s\" >> %s",history[i],fileroute);
+		system(command);
+	}
+	curline=0;
 	return;
 }
 char* omitname(char *str){
