@@ -1,14 +1,21 @@
+#define FILEROUTE "~/chat_history/server.txt"
+#define DATAROUTE "~/chat_history/"
 #define CLIENTNUM 21  // leave one to refuse
 #include<curses.h> /* add stdio.h automatically */
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<stdlib.h>
 #include<sys/types.h>
+#include<sys/stat.h>
 #include<string.h>
 #include<strings.h>
 #include<math.h>
 #include<pthread.h> //change name
-//funcrion
+struct stat route;
+char command[350];
+char history[500][300];
+int curline=0;
+//function
 void create_recv_thread(int order);
 int cancel_recv_thread(int order);
 void command_thread(void);
@@ -78,7 +85,6 @@ int main(void){
 	dest1.sin_addr.s_addr = INADDR_ANY;
 
 	// Assign a port number to socket
-//	bind(sockfd, (struct sockaddr*)&dest1, sizeof(dest1));
 	if(bind(sockfd, (struct sockaddr*)&dest1, sizeof(dest1))==-1){
 		printf("bind()==-1\n");
 		exit(1);
@@ -94,6 +100,29 @@ int main(void){
 	}
 
 	puts("wait to client connecting");
+	//build history data
+	if(stat(DATAROUTE,&route)!=0){
+		sprintf(command,"mkdir %s",DATAROUTE);
+		system(command);
+	}
+	sprintf(command,"date >> %s",FILEROUTE);
+	system(command);
+	sprintf(command,"echo \"*****\" >> %s",FILEROUTE);
+	system(command);
+	sprintf(command,"hostname | nslookup >> %s",FILEROUTE);
+	sprintf(command,"echo \"*****\" >> %s",FILEROUTE);
+	system(command);
+	sprintf(command,"echo \"server IP:\" >> %s",FILEROUTE);
+	system(command);
+	sprintf(command,"wget -q -O - checkip.dyndns.org|sed -e 's/.*Current IP Address: //' -e 's/<.*$//' >> %s",FILEROUTE);
+	system(command);
+	sprintf(command,"echo \"*****\" >> %s",FILEROUTE);
+	system(command);
+	sprintf(command,"echo \"pw:%s\" >> %s",myname,FILEROUTE);
+	system(command);
+	sprintf(command,"echo \"port:%d\" >> %s",PORT,FILEROUTE);
+	system(command);
+	
 	int order=0;
 	while(1){
 		for(order=0;order<CLIENTNUM;order++){
@@ -137,7 +166,6 @@ int cancel_recv_thread(int order){
 	close(client[order].fd);	
 	client[order].fd=-1;
 	memberctrl("remove",client[order].name);
-//	printf("remove %s 139",client[order].name);
 	client[order].curname[0]='\0';
 	client[order].name[0]='\0';//after remove!!
 	return 0;
@@ -145,6 +173,9 @@ int cancel_recv_thread(int order){
 void wall(char *sender,char *string){
 	char output[307];
 	int i;
+	sprintf(history[curline],"%s:%s",sender,string);
+	puts(history[curline]);
+	curline++;
 	for(i=0;i<CLIENTNUM;i++){
 		if(client[i].fd!=-1){
 			sprintf(output,"public %s %s",sender,string);
@@ -158,6 +189,9 @@ void wall(char *sender,char *string){
 int writeto(char *sender,char *receiver,char *string){
 	char output[307];	
 	int i;
+	sprintf(history[curline],"(%s to %s)~%s",sender,receiver,string);
+	puts(history[curline]);
+	curline++;
 //	printf("recv private\n");
 	for(i=0;i<CLIENTNUM;i++){
 		if(strcmp(receiver,client[i].name)==0 && client[i].fd!=-1){
@@ -167,7 +201,7 @@ int writeto(char *sender,char *receiver,char *string){
 			}
 //			sleep(1);
 		}
-		if(strcmp(sender,client[i].name)==0 && client[i].fd!=-1){
+		if(strcmp(sender,client[i].curname)==0 && client[i].fd!=-1){
 			sprintf(output,"private (%s to %s)~%s",sender,receiver,string);
 			if(send(client[i].fd,output,sizeof(output),0)<=0){
 				printf("send %s err\n",client[i].name);
@@ -186,7 +220,7 @@ void memberctrl(char *mod,char *name){
 			if(strcmp(name,client[i].name)==0){
 				for(j=0;j<CLIENTNUM;j++){
 					if((client[j].fd!=-1)&&(i!=j)){
-						sprintf(output,"add %s",client[j].curname);
+						sprintf(output,"add %s",client[j].name);
 						send(client[i].fd,output,sizeof(output),0);
 						sleep(1);//too fast
 					}
@@ -218,6 +252,8 @@ void kill(char *man){
 		if(strcmp(man,client[i].name)==0){
 			if(cancel_recv_thread(i)==0){
 				printf("%s is killed\n",client[i].name);
+				sprintf(history[curline],"%s is killed",man);
+				curline++;
 				return;
 			}
 			else{
@@ -233,6 +269,8 @@ void close_server(void){
 	int i;
 	wall("root","server will close after 5 seconds");
 	printf("will quit after 5 seconds\n5\n");
+	sprintf(command,"echo \"server closed\" >> %s",FILEROUTE);
+	system(command);
 	for(i=4;i>=0;i--){
 		sleep(1);
 		printf("%d\n",i);
@@ -260,20 +298,34 @@ void recemsg(void *num){
 
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS,NULL);
 	while(1){
+		//-----------------------------------------------
+		if(curline==300){
+
+			sprintf(command,"date >> %s",FILEROUTE);
+			system(command);
+			for(i=0;i<300;i++){
+				sprintf(command,"echo \"%s\" >> %s",history[i],FILEROUTE);
+				system(command);
+			}
+			curline=0;
+		}
+		//-----------------------------------------------autosave
 		len = recv(client[order].fd, buffer0, sizeof(buffer0),0);
 		if(len==0){
 			printf("client[%d] connection break\n",order);
+			sprintf(history[curline],"%s connection break",client[order].name);
+			curline++;
 			break;
 		}
-		else if(len>=1){
+		else if(len>=1){	
 			sscanf(buffer0,"%s",command);
 			if(strcmp(command,"wall")==0){
-				printf("recv wall msg from %s\n",client[order].name);	
+//				printf("recv wall msg from %s\n",client[order].name);	
 				sscanf(buffer0,"%*s %[^\n]",string);
 				wall(client[order].curname,string);
 			}
 			else if(strcmp(command,"write")==0){
-				printf("recv write msg from %s\n",client[order].name);
+//				printf("recv write msg from %s\n",client[order].name);
 				sscanf(buffer0,"%*s %s %[^\n]",man,string);
 				if(strcmp(man,"root")==0){
 					printf("%s:%s\n",client[order].name,string);
@@ -288,6 +340,9 @@ void recemsg(void *num){
 				if(strcmp(string,myname)==0){
 					send(client[order].fd,"pw accept",sizeof("pw accept"),0);
 					printf("%s login successfully\n",client[order].name);
+					sprintf(history[curline],"%s login as root",client[order].name);
+					curline++;
+
 				}
 				else{
 					send(client[order].fd,"pw refuse",sizeof("pw refuse"),0);
@@ -302,6 +357,7 @@ void recemsg(void *num){
 				else{
 					strcpy(client[order].curname,client[order].name);
 				}
+				printf("%s's curname is %s\n",client[order].name,client[order].curname);
 			}
 			else if(strcmp(command,"hide")==0){
 				sprintf(output,"remove %s",client[order].name);
@@ -349,19 +405,21 @@ void recemsg(void *num){
 			}
 			else if(strcmp(command,"shutdown")==0){
 				printf("%s shutdown server",client[order].name);
+				sprintf(command,"echo \"%s close server\" >> %s",client[order].name,FILEROUTE);
+				system(command);
 				pthread_create(&shutdownid,NULL,(void *)close_server,NULL);
 			}
 			else if(strcmp(command,"name")==0){
-				if(sscanf(buffer0,"%*s %[^\n]",client[order].curname)!=1){
+				if(sscanf(buffer0,"%*s %[^\n]",client[order].name)!=1){
 					send(client[order].fd,"sys No Name? Bazinga",sizeof("sys No Name? Bazinga"),0);
 					break;
 				}
-				if(strcmp(client[order].curname,"root")==0){
+				if(strcmp(client[order].name,"root")==0){
 					send(client[order].fd,"sys Name can't be \"root\"",sizeof("sys Name can't be \"root\""),0);
 					break;
 				}
 				for(i=0;i<CLIENTNUM;i++){
-					if((i!=order)&&client[i].fd!=-1&&(strcmp(client[order].curname,client[i].name)==0)){
+					if((i!=order)&&client[i].fd!=-1&&(strcmp(client[order].name,client[i].name)==0)){
 						send(client[order].fd,"sys Name has been used",sizeof("sys Name has been used"),0);
 						endsub=1;
 						break;
@@ -370,8 +428,10 @@ void recemsg(void *num){
 				if(endsub==1){
 					break;
 				}
-				printf("client[%d] %s fd=%d has already connected\n",order,client[order].curname,client[order].fd);
-				strcpy(client[order].name,client[order].curname);
+				printf("client[%d] %s fd=%d has already connected\n",order,client[order].name,client[order].fd);
+				sprintf(history[curline],"%s connected",client[order].name);
+				curline++;
+				strcpy(client[order].curname,client[order].name);
 				memberctrl("add",client[order].name);
 				memberctrl("all",client[order].name);
 			}
@@ -389,6 +449,8 @@ void recemsg(void *num){
 	client[order].curname[0]='\0';//be careful it should after remove
 	client[order].name[0]='\0';	
 	pthread_exit(0);
+	sprintf(history[curline],"%s leave",client[order].name);
+	curline++;
 	return;
 }
 void command_thread(void){	
@@ -397,7 +459,8 @@ void command_thread(void){
 	char who[30];
 	char string[300];
 	int i;
-	getchar();	
+//	getchar();
+	setbuf(stdin,NULL);	
 	//root command line
 	while(1){
 		fgets(command,sizeof(command),stdin);
@@ -435,6 +498,22 @@ void command_thread(void){
 				}
 			}
 		}
+		else if(strcmp(what,"save")==0){
+
+			if(curline>0){
+				sprintf(command,"date >> %s",FILEROUTE);
+				system(command);
+				for(i=0;i<curline;i++){
+					sprintf(command,"echo \"%s\" >> %s",history[i],FILEROUTE);
+					system(command);
+				}
+				curline=0;
+				puts("saved");
+			}
+			else{
+				puts("no history to save");
+			}
+		}
 		else if(strcmp(what,"quit")==0){
 			close_server();
 			break;
@@ -444,6 +523,7 @@ void command_thread(void){
 			puts("write id string -> write string to someone");
 			puts("kill id -> kick somebody out of the room");
 			puts("w       -> print everyone on line");
+			puts("save    -> save history");
 			puts("d string(command) -> send command to every directory(if U know the rule");
 			puts("quit    -> end sub");
 		}
