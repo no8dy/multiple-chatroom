@@ -349,7 +349,7 @@ int climission(void){
 	struct sockaddr_in dest0;
 	/* input IP */
 
-	puts("Input IP(enter local default):");
+	puts("Input IP\n(ghsot=>ghost.cs.nccu.edu.tw)\n(cherry=>cherry.cs.nccu.edu.tw)\n(enter=>local)\n:");
 	fgets(IP,sizeof(IP),stdin);
 	if(IP[0]=='\n'){	
 		sprintf(IP,"127.0.0.1");
