@@ -1,16 +1,23 @@
 #define FILEROUTE sprintf(fileroute,"~/chat_history/%s",myname);
 #define DATAROUTE "~/chat_history/"
-#include<curses.h> /* add stdio.h automatically */
+#include<ncurses.h> /* add stdio.h automatically */
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<stdlib.h>
 #include<sys/types.h>
 #include<sys/stat.h>
+#include<unistd.h>
 #include<string.h>
 #include<strings.h>
 #include<math.h>
 #include<pthread.h>
 #include<signal.h>
+/* for inet_aton */
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+
 #define CLIENTNUM 21//one for root
 struct stat route;
 void storehistory(void);
@@ -25,7 +32,7 @@ void selectmod(void);//for opinion win to select
 void rootmod(void);
 char* omitname(char *str);//if name>8char print "name8,,,"
 char omitstr[15];
-///funcrion for socket
+///function for socket
 void recemsg(void);
 void escape(int a);
 int climission(void);
@@ -127,7 +134,7 @@ int main(){
 	win[1]=newwin(5,COLS-23,LINES-5,2); // set insert box
 	win[4]=newwin(5,20,LINES-5,COLS-21); //opinion line
 
-	win[5]=newwin(1,15,LINES-5+win[1]->_maxy,win[1]->_maxx-12);
+	win[5]=newwin(1,15,LINES-5+(win[1]->_maxy),(win[1]->_maxx)-12);
 
 	keypad(win[0],TRUE);
    	keypad(win[1],TRUE);

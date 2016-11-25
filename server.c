@@ -10,6 +10,7 @@
 #include<string.h>
 #include<strings.h>
 #include<math.h>
+#include<unistd.h>
 #include<pthread.h> //change name
 struct stat route;
 char command[350];
@@ -22,7 +23,7 @@ void command_thread(void);
 void recemsg(void *num);
 //void recemsg(void);
 void sermission(void);
-void kill(char *man);
+void kick(char *man);
 void memberctrl(char *mod,char *name);
 void wall(char *sender,char *string);
 void close_server(void);
@@ -96,7 +97,7 @@ int main(void){
 	// create thread to  Accept commands
 	if(pthread_create(&commandid,NULL,(void *)command_thread,NULL)!=0){
 		printf("create pthread error!\n");
-		return;
+		return 1;
 	}
 
 	puts("wait to client connecting");
@@ -157,7 +158,7 @@ int cancel_recv_thread(int order){
 	int ret;
 	if(!pthread_cancel(client[order].id)){
 		printf("cancel %s OK",client[order].name);
-		online--;//kill by server
+		online--;//kick by server
 	}
 	else{
 		printf("cancel pthread error!");
@@ -246,18 +247,18 @@ void memberctrl(char *mod,char *name){
 	}
 	return;
 }
-void kill(char *man){
+void kick(char *man){
 	int i;
 	for(i=0;i<CLIENTNUM;i++){
 		if(strcmp(man,client[i].name)==0){
 			if(cancel_recv_thread(i)==0){
-				printf("%s is killed\n",client[i].name);
-				sprintf(history[curline],"%s is killed",man);
+				printf("%s is kicked\n",client[i].name);
+				sprintf(history[curline],"%s is kicked",man);
 				curline++;
 				return;
 			}
 			else{
-				printf("%s isn't killed\n",client[i].name);
+				printf("%s isn't kicked\n",client[i].name);
 				return;
 			}
 		}
@@ -277,7 +278,7 @@ void close_server(void){
 	}
 	for(i=0;i<CLIENTNUM;i++){
 		if(client[i].fd!=-1){
-			kill(client[i].name);
+			kick(client[i].name);
 		}
 	}
 	close(sockfd);
@@ -398,10 +399,10 @@ void recemsg(void *num){
 			else if(strcmp(command,"")==0){
 
 			}
-			else if(strcmp(command,"kill")==0){
-				printf("recv kill msg from %s\n",client[order].name);
+			else if(strcmp(command,"kick")==0){
+				printf("recv kick msg from %s\n",client[order].name);
 				sscanf(buffer0,"%*s %s",man);
-				kill(man);
+				kick(man);
 			}
 			else if(strcmp(command,"shutdown")==0){
 				printf("%s shutdown server",client[order].name);
@@ -474,9 +475,9 @@ void command_thread(void){
 			sscanf(command,"%*s %s %s",who,string);
 			writeto("root",who,string);
 		}
-		else if(strcmp(what,"kill")==0){
+		else if(strcmp(what,"kick")==0){
 			sscanf(command,"%*s %[^\n]",who);
-			kill(who);
+			kick(who);
 		}
 		else if(strcmp(what,"pw")==0){
 			printf("pw=%s\n",myname);
@@ -521,7 +522,7 @@ void command_thread(void){
 		else if(strcmp(what,"help")==0){
 			puts("wall string -> write string for everyone");
 			puts("write id string -> write string to someone");
-			puts("kill id -> kick somebody out of the room");
+			puts("kick id -> kick somebody out of the room");
 			puts("w       -> print everyone on line");
 			puts("save    -> save history");
 			puts("d string(command) -> send command to every directory(if U know the rule");
