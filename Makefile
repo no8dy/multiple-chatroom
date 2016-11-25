@@ -8,6 +8,6 @@
 											#endif => -DNCURSES_INTERNALS
 all:
 	gcc server.c -o server -pthread #-lsocket -lnsl
-	gcc client.c -o client -pthread -lncurses -DNCURSES_INTERNALS -DNCURSES_OPAQUE=0 #-lsocket -lnsl 
+	gcc client.c -o client -pthread -lcurses -DNCURSES_INTERNALS -DNCURSES_OPAQUE=0 #-lsocket -lnsl 
 clean:
-	rm -f server client
+	rm server client

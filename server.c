@@ -103,7 +103,7 @@ int main(void){
 	puts("wait to client connecting");
 	//build history data
 	if(stat(DATAROUTE,&route)!=0){
-		sprintf(command,"mkdir %s",DATAROUTE);
+		sprintf(command,"if [ ! -d %s ];then mkdir %s;fi",DATAROUTE , DATAROUTE);
 		system(command);
 	}
 	sprintf(command,"date >> %s",FILEROUTE);
@@ -193,21 +193,18 @@ int writeto(char *sender,char *receiver,char *string){
 	sprintf(history[curline],"(%s to %s)~%s",sender,receiver,string);
 	puts(history[curline]);
 	curline++;
-//	printf("recv private\n");
 	for(i=0;i<CLIENTNUM;i++){
 		if(strcmp(receiver,client[i].name)==0 && client[i].fd!=-1){
 			sprintf(output,"private (%s to %s)~%s",sender,receiver,string);
 			if(send(client[i].fd,output,sizeof(output),0)<=0){
 				printf("send %s err\n",client[i].name);
 			}
-//			sleep(1);
 		}
 		if(strcmp(sender,client[i].curname)==0 && client[i].fd!=-1){
 			sprintf(output,"private (%s to %s)~%s",sender,receiver,string);
 			if(send(client[i].fd,output,sizeof(output),0)<=0){
 				printf("send %s err\n",client[i].name);
 			}
-//			sleep(1);
 		}
 	}
 	return 0;
@@ -215,7 +212,6 @@ int writeto(char *sender,char *receiver,char *string){
 void memberctrl(char *mod,char *name){
 	int i,j;
 	char output[25];
-//	printf("180 %s",name);
 	if(strcmp(mod,"all")==0){
 		for(i=0;i<CLIENTNUM;i++){
 			if(strcmp(name,client[i].name)==0){

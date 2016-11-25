@@ -1,6 +1,6 @@
 #define FILEROUTE sprintf(fileroute,"~/chat_history/%s",myname);
 #define DATAROUTE "~/chat_history/"
-#include<ncurses.h> /* add stdio.h automatically */
+#include<curses.h> /* add stdio.h automatically */
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<stdlib.h>
@@ -16,7 +16,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+/* for usleep */
+#include<sys/timeb.h>
+#include<time.h>
 
 #define CLIENTNUM 21//one for root
 struct stat route;
@@ -213,7 +215,6 @@ void recemsg(void){
 //	int inserty,insertx;
 	char mod[10];
 	char sendername[10];
-
 	while(1){
 	// Receive message from the server and print to screen
 		len = recv(serverfd, buffer0, sizeof(buffer0),0);
@@ -252,11 +253,8 @@ void recemsg(void){
 			else if(strcmp(mod,"sys")==0){
 				sscanf(buffer0,"%*s %[^\n]",string);
 				sprintf(output,"system:%s",string);
-				endwin();
-				close(serverfd);
-				sleep(2);
 				puts(output);
-				exit(1);
+				escape(1);
 			}
 			else if(strcmp(mod,"add")==0){
 				sscanf(buffer0,"%*s %s",sendername);
@@ -299,6 +297,8 @@ void recemsg(void){
 				localine--;
 				topline++;
 			}
+            /* WTF ... if don't sleep , the screen will in a mess?! */
+            usleep(1000);
 			redraw(1);
 		}
 	}
@@ -356,7 +356,7 @@ int climission(void){
 	struct sockaddr_in dest0;
 	/* input IP */
 
-	puts("Input IP\n(ghsot=>ghost.cs.nccu.edu.tw)\n(cherry=>cherry.cs.nccu.edu.tw)\n(enter=>local)\n:");
+	printf("Input IP\n(ghsot=>ghost.cs.nccu.edu.tw)\n(cherry=>cherry.cs.nccu.edu.tw)\n(enter=>local):");
 	fgets(IP,sizeof(IP),stdin);
 	if(IP[0]=='\n'){	
 		sprintf(IP,"127.0.0.1");
@@ -494,8 +494,7 @@ void redraw(int mod){
 	
 	return;
 }
-int terminal(WINDOW *twin,char *str,int n)
-{
+int terminal(WINDOW *twin,char *str,int n){
 	char *ostr, ec, kc;
 	int c, oldx, remain;
 	int prex,prey;
@@ -655,9 +654,9 @@ int terminal(WINDOW *twin,char *str,int n)
 		*str = '\0';
 		return (ERR);
 	}
-	*str = '\0';
-wrefresh(win[0]);
-	return (OK);
+    *str = '\0';
+    wrefresh(win[0]);
+    return (OK);
 }
 void membermod(char *name){
 	int input;
