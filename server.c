@@ -1,7 +1,8 @@
 #define FILEROUTE "~/chat_history/server.txt"
 #define DATAROUTE "~/chat_history/"
 #define CLIENTNUM 21  // leave one to refuse
-#include<curses.h> /* add stdio.h automatically */
+/* add stdio.h automatically */
+#include<curses.h> 
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<stdlib.h>
@@ -11,7 +12,11 @@
 #include<strings.h>
 #include<math.h>
 #include<unistd.h>
-#include<pthread.h> //change name
+#include<pthread.h>
+/* for usleep */
+#include<sys/timeb.h>
+#include<time.h>
+
 struct stat route;
 char command[350];
 char history[500][300];
@@ -21,7 +26,6 @@ void create_recv_thread(int order);
 int cancel_recv_thread(int order);
 void command_thread(void);
 void recemsg(void *num);
-//void recemsg(void);
 void sermission(void);
 void kick(char *man);
 void memberctrl(char *mod,char *name);
@@ -157,7 +161,7 @@ int main(void){
 int cancel_recv_thread(int order){
 	int ret;
 	if(!pthread_cancel(client[order].id)){
-		printf("cancel %s OK",client[order].name);
+		printf("cancel %s OK\n",client[order].name);
 		online--;//kick by server
 	}
 	else{
@@ -212,6 +216,7 @@ int writeto(char *sender,char *receiver,char *string){
 void memberctrl(char *mod,char *name){
 	int i,j;
 	char output[25];
+    /* send new member a list contains all members*/
 	if(strcmp(mod,"all")==0){
 		for(i=0;i<CLIENTNUM;i++){
 			if(strcmp(name,client[i].name)==0){
@@ -219,7 +224,7 @@ void memberctrl(char *mod,char *name){
 					if((client[j].fd!=-1)&&(i!=j)){
 						sprintf(output,"add %s",client[j].name);
 						send(client[i].fd,output,sizeof(output),0);
-						sleep(1);//too fast
+						sleep(1);//usleep seems to not work well
 					}
 				}
 				break;
@@ -234,7 +239,6 @@ void memberctrl(char *mod,char *name){
 	else if(strcmp(mod,"remove")==0){
 		sprintf(output,"remove %s",name);
 	}
-//	printf("202 %s\n",name);
 	for(i=0;i<CLIENTNUM;i++){
 		if(client[i].fd!=-1 && strcmp(client[i].name,name)!=0){
 			send(client[i].fd,output, sizeof(output),0);
@@ -248,18 +252,20 @@ void kick(char *man){
 	for(i=0;i<CLIENTNUM;i++){
 		if(strcmp(man,client[i].name)==0){
 			if(cancel_recv_thread(i)==0){
-				printf("%s is kicked\n",client[i].name);
+				printf("%s is kicked\n",man);
 				sprintf(history[curline],"%s is kicked",man);
 				curline++;
 				return;
 			}
 			else{
-				printf("%s isn't kicked\n",client[i].name);
+                if(strcmp(man , "All"))
+				    printf("%s isn't kicked\n",client[i].name);
 				return;
 			}
 		}
 	}
-	printf("there is no client named %s\n",man);
+    if(strcmp(man , "All"))
+	    printf("there is no client named %s\n",man);
 	return;
 }
 void close_server(void){
@@ -456,7 +462,6 @@ void command_thread(void){
 	char who[30];
 	char string[300];
 	int i;
-//	getchar();
 	setbuf(stdin,NULL);	
 	//root command line
 	while(1){
@@ -468,7 +473,7 @@ void command_thread(void){
 			wall("root",string);
 		}
 		else if(strcmp(what,"write")==0){
-			sscanf(command,"%*s %s %s",who,string);
+			sscanf(command,"%*s %s %[^\n]",who,string);
 			writeto("root",who,string);
 		}
 		else if(strcmp(what,"kick")==0){
@@ -521,7 +526,7 @@ void command_thread(void){
 			puts("kick id -> kick somebody out of the room");
 			puts("w       -> print everyone on line");
 			puts("save    -> save history");
-			puts("d string(command) -> send command to every directory(if U know the rule");
+			puts("d string(command) -> send command to everyone directory(if U know the rule");
 			puts("quit    -> end sub");
 		}
 		else if(strcmp(what,"d")==0){
@@ -533,7 +538,7 @@ void command_thread(void){
 			}
 		}
 		else{
-			puts("no such command");
+			puts("no such command (do you need \"help\" ?)");
 		}
 	}
 

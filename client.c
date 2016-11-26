@@ -1,6 +1,9 @@
 #define FILEROUTE sprintf(fileroute,"~/chat_history/%s",myname);
 #define DATAROUTE "~/chat_history/"
-#include<curses.h> /* add stdio.h automatically */
+/* one for root*/
+#define CLIENTNUM 21
+/* include stdio.h by curses.h automatically */
+#include<curses.h> 
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<stdlib.h>
@@ -8,39 +11,23 @@
 #include<sys/stat.h>
 #include<unistd.h>
 #include<string.h>
-#include<strings.h>
-#include<math.h>
 #include<pthread.h>
+/* for ctrl-C */
 #include<signal.h>
 /* for inet_aton */
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<arpa/inet.h>
 /* for usleep */
 #include<sys/timeb.h>
 #include<time.h>
 
-#define CLIENTNUM 21//one for root
 struct stat route;
 void storehistory(void);
 char command[350];
 char fileroute[40];
-//function for curses
-void initial(void);
-void special(int attrs,WINDOW *swin,int y,int x,char *text);
-int terminal(WINDOW *twin,char *str,int n);//manipulate insert box
-void membermod(char *name);//for member win to select
-void selectmod(void);//for opinion win to select
-void rootmod(void);
-char* omitname(char *str);//if name>8char print "name8,,,"
-char omitstr[15];
-///function for socket
-void recemsg(void);
-void escape(int a);
-int climission(void);
-void redraw(int mod);
-void memberctrl(char *mod,char *name);
-//dimentation for socket
+
+//var for socket
 struct clientinfo {
 	int hold;
 	char name[10];
@@ -53,21 +40,28 @@ struct clientinfo client[CLIENTNUM+1]={
 					   		.name="All"	}
 };
 					//   v one for "All"
-int memberlist[CLIENTNUM+1]={[0]=0};//point client array (sorted)
-int online=0;//the num people on line
-char buffer0[310];//to receive msg
+int memberlist[ CLIENTNUM + 1 ] = {[ 0 ] = 0};//point client array (sorted)
+int online = 0;//the num people on line
 char myname[11];
 char curname[20];
-char receivername[11]={"All"};
+char receivername[11]={ "All" };
 int serverfd;
 int clientfd;
 int PORT;
 char IP[25];
 int ch;
 char non;//for getchar nothing
-int root=0;// whether you have root competence
-//dimentation for curses
-int rooting=0;
+int root = 0;// whether you have root competence
+
+///function for socket
+void recemsg(void);
+void escape(int a);
+int cnt_host(void);
+void redraw(int mod);
+void memberctrl(char *mod,char *name);
+
+//var for curses
+int rooting = 0;
 WINDOW *win[7],*curwin,*rootwin;
 int onlinetop=0;//reference point for online box to scrl
 char history[300][300]={"\0"};
@@ -77,6 +71,16 @@ int localine=0;//for communication bodx
 int x,y;
 int new=1;
 char pointer='$';//$(normal) >(just good) #(root)
+//function for curses
+void initial(void);
+void special(int attrs,WINDOW *swin,int y,int x,char *text);
+int terminal(WINDOW *twin,char *str,int n);//manipulate insert box
+void membermod(char *name);//for member win to select
+void selectmod(void);//for opinion win to select
+void rootmod(void);
+char* omitname(char *str);//if name>8char print "name8,,,"
+char omitstr[15];
+
 //start main program
 int main(){
 	char output[17];
@@ -95,7 +99,7 @@ int main(){
 	strcpy(curname,myname);
 	setbuf(stdin,NULL);
 
-	if(climission()==-1){
+	if(cnt_host()==-1){
 		printf("port not be used\n");
 		escape(1);
 	}
@@ -132,7 +136,7 @@ int main(){
 	win[3]=newwin(3,COLS-13,0,0);//command box
 	win[0]=newwin(300,COLS-13,3,0); // set communication box
 
-	win[6]=newwin(5,2,LINES-5,0);// > to whom box (in insert box
+	win[6]=newwin(5,2,LINES-5,0);// to whom box (in insert box
 	win[1]=newwin(5,COLS-23,LINES-5,2); // set insert box
 	win[4]=newwin(5,20,LINES-5,COLS-21); //opinion line
 
@@ -208,35 +212,29 @@ void escape(int a){
 }
 
 void recemsg(void){
-	char output[400];
-	char string[300]={'\0'};
-	int len;
-	int i;
-//	int inserty,insertx;
-	char mod[10];
-	char sendername[10];
+	int len , i;
+    char recv_str[310];//to receive msg
+	char output[400] , string[300]={'\0'};
+	char mod[10] , sendername[10];
 	while(1){
 	// Receive message from the server and print to screen
-		len = recv(serverfd, buffer0, sizeof(buffer0),0);
-
+		len = recv(serverfd, recv_str, sizeof(recv_str),0);
 		if(len==0){
 			escape(2);
 			break;
 		}
 		else if(len>=1){
-			sscanf(buffer0,"%s",mod);
+			sscanf(recv_str,"%s",mod);
 			if(strcmp(mod,"public")==0){
-//		mvwprintw(win[3],0,18,"%d",i++);	
-//		wrefresh(win[3]);
-				sscanf(buffer0,"%*s %s %[^\n]",sendername,string);
+				sscanf(recv_str,"%*s %s %[^\n]",sendername,string);
 				sprintf(output,"%s:%s",sendername,string);
 			}
 			else if(strcmp(mod,"private")==0){
-				sscanf(buffer0,"%*s %[^\n]",string);
+				sscanf(recv_str,"%*s %[^\n]",string);
 				sprintf(output,"%s",string);
 			}
 			else if(strcmp(mod,"pw")==0){
-				sscanf(buffer0,"%*s %[^\n]",string);
+				sscanf(recv_str,"%*s %[^\n]",string);
 				if(strcmp(string,"accept")==0){
 					root=1;
 					pointer='#';
@@ -251,19 +249,22 @@ void recemsg(void){
 				continue;
 			}
 			else if(strcmp(mod,"sys")==0){
-				sscanf(buffer0,"%*s %[^\n]",string);
+				sscanf(recv_str,"%*s %[^\n]",string);
 				sprintf(output,"system:%s",string);
 				puts(output);
 				escape(1);
 			}
 			else if(strcmp(mod,"add")==0){
-				sscanf(buffer0,"%*s %s",sendername);
+				sscanf(recv_str,"%*s %[^\n]",sendername);
 				memberctrl("add",sendername);
+                //usleep(10000);
+                //sleep(1);
 				continue;
 			}
 			else if(strcmp(mod,"remove")==0){
-				sscanf(buffer0,"%*s %s",sendername);
+				sscanf(recv_str,"%*s %s",sendername);
 				memberctrl("remove",sendername);
+                //usleep(10000);
 				continue;
 			}
 			if(win[0]->_curx==0){
@@ -298,7 +299,7 @@ void recemsg(void){
 				topline++;
 			}
             /* WTF ... if don't sleep , the screen will in a mess?! */
-            usleep(1000);
+            usleep(10000);
 			redraw(1);
 		}
 	}
@@ -311,6 +312,9 @@ void memberctrl(char *mod,char *name){
 		sleep(1);
 	}
 	if(strcmp(mod,"add")==0){
+        for(i=1;i<CLIENTNUM+1;i++)
+            if(!strcmp(client[i].name , name))
+                    return;
 		for(i=1;i<CLIENTNUM+1;i++){
 			if(client[i].hold==0){
 				client[i].hold=1;
@@ -322,8 +326,11 @@ void memberctrl(char *mod,char *name){
 	}
 	if(strcmp(mod,"remove")==0){
 		for(i=1;i<CLIENTNUM+1;i++){
-			if(strcmp(client[i].name,name)==0){
-				wrefresh(win[0]);
+			if(!strcmp(client[i].name,name)){
+		        if(!strcmp(client[i].name , receivername))
+                    strcpy(receivername , "All") , redraw(0);
+                /*if receiver be removed , point to all*/
+                wrefresh(win[0]);
 				client[i].name[0]='\0';
 				client[i].hold=0;
 				online--;
@@ -332,7 +339,7 @@ void memberctrl(char *mod,char *name){
 		}
 	}
 	j=1;//
-	for(i=1;i<CLIENTNUM+1;i++){//i!=0 because 0 is All
+	for(i=1;i<CLIENTNUM+1;i++){//i != 0 because 0 is All
 		if(client[i].hold==1){
 			memberlist[j]=i;
 			j++;
@@ -351,7 +358,7 @@ void memberctrl(char *mod,char *name){
 	redraw(1);
 	return;
 }
-int climission(void){
+int cnt_host(void){
 
 	struct sockaddr_in dest0;
 	/* input IP */
@@ -390,13 +397,11 @@ int climission(void){
 	else{
 		puts("please wait");
 	}
-	bzero(buffer0, 128);
 	
 	return 0;
 }
 
 void initial(void){
-
 	initscr();
 	cbreak();
 	nonl();
@@ -504,7 +509,6 @@ int terminal(WINDOW *twin,char *str,int n){
 	kc = killchar();
 
 	oldx = twin->_curx;
-//	_DIAGASSERT(n == -1 || n > 1);
 	remain = n - 1;
 
 	while ((c = wgetch(twin)) != ERR && c != '\n' && c != '\r') {
@@ -662,6 +666,8 @@ void membermod(char *name){
 	int input;
 	static int cursor=0;
 	curwin=win[2];
+    if(client[memberlist[cursor]].name[0] == '\0')
+        cursor--;/*avoid the user being removed, s.t. point nothing */
 	mvwprintw(win[2],cursor-onlinetop,2,"%c",pointer);
 	special(A_REVERSE,win[2],cursor-onlinetop,4,omitname(client[memberlist[cursor]].name));
 	wrefresh(win[2]);
@@ -768,12 +774,11 @@ void rootmod(void){
 	int selecter=1;
 	char pw[20];
 	char output[25];
-	char killname[20];
+	char kickname[20];
 	int rootinput;
 	static int hide=0;
 	static int hideroot=1;
 	static int rootID=0;
-//	static char changename[20]={"root"};
 	curwin=rootwin;
 	rooting=1;
 	wclear(rootwin);
@@ -793,7 +798,7 @@ void rootmod(void){
 			mvwprintw(rootwin,3,5,"Hide root ID");
 		if(hideroot==1)
 			mvwprintw(rootwin,3,5,"Show root ID");
-		mvwprintw(rootwin,4,5,"Kill member");
+		mvwprintw(rootwin,4,5,"Kick member");
 		mvwprintw(rootwin,5,5,"Shutdown server");
 		mvwprintw(rootwin,6,5,"Logout root");
 		mvwprintw(rootwin,7,5,"Exit");
@@ -875,9 +880,9 @@ void rootmod(void){
 
 				}
 				else if(selecter==4){
-					membermod(killname);
+					membermod(kickname);
 					curwin=rootwin;
-					sprintf(output,"kill %s",killname);
+					sprintf(output,"kick %s",kickname);
 					send(serverfd,output,sizeof(output),0);
 				}
 				else if(selecter==5){
