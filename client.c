@@ -90,7 +90,8 @@ int main(){
 	strcpy(myname,"nobody");
 	// input name
 	printf("Input your name(less than 10 letters):");
-	fgets(myname,sizeof(myname),stdin);
+	//fgets(myname,sizeof(myname),stdin);
+    scanf("%s" , myname);
 	for(i=0;i<sizeof(myname);i++){
 		if(myname[i]=='\n'){
 			myname[i]='\0';
@@ -104,6 +105,7 @@ int main(){
 		escape(1);
 	}
 
+
 	// use thread to listen msg //
 	pthread_t id;
 	int ret;
@@ -112,10 +114,11 @@ int main(){
 		printf("create pthread error!\n");
 		exit(1);
 	}
-
 	sprintf(output,"name %s",curname);
-	send(serverfd,output,sizeof(output),0);
-	FILEROUTE//SIGN fileroute
+
+    send(serverfd,output,sizeof(output),0);
+    
+    FILEROUTE//SIGN fileroute
 	// build history data
 	if(stat(DATAROUTE,&route)==0){
 		sprintf(command,"mkdir %s",DATAROUTE);
@@ -126,7 +129,6 @@ int main(){
 	sprintf(command,"echo \"connected to %s:%d\" >> %s",IP,PORT,fileroute);
 	system(command);
 	// start curses terminal
-
 	int hch;//rootwin ch for getch
 
 	initial();
@@ -155,7 +157,6 @@ int main(){
 	leaveok(win[0],TRUE);
 
 	rootwin=newwin(10,COLS/3,5,COLS/3);
-	
 	curwin=win[1];
 	redraw(0);//need curwin
 	wmove(win[1],1,0);
@@ -224,17 +225,20 @@ void recemsg(void){
 			break;
 		}
 		else if(len>=1){
-			sscanf(recv_str,"%s",mod);
+            
+            int readed = 0 , ch_cnt = 0;
+			sscanf(recv_str , "%s%n" , mod , &readed);
+
 			if(strcmp(mod,"public")==0){
-				sscanf(recv_str,"%*s %s %[^\n]",sendername,string);
+				sscanf(recv_str + readed ,"%s %[^\n]",sendername,string);
 				sprintf(output,"%s:%s",sendername,string);
 			}
 			else if(strcmp(mod,"private")==0){
-				sscanf(recv_str,"%*s %[^\n]",string);
+				sscanf(recv_str + readed ," %[^\n]",string);
 				sprintf(output,"%s",string);
 			}
 			else if(strcmp(mod,"pw")==0){
-				sscanf(recv_str,"%*s %[^\n]",string);
+				sscanf(recv_str + readed ,"%[^\n]",string);
 				if(strcmp(string,"accept")==0){
 					root=1;
 					pointer='#';
@@ -249,20 +253,20 @@ void recemsg(void){
 				continue;
 			}
 			else if(strcmp(mod,"sys")==0){
-				sscanf(recv_str,"%*s %[^\n]",string);
+				sscanf(recv_str + readed , "%[^\n]" ,string);
 				sprintf(output,"system:%s",string);
 				puts(output);
 				escape(1);
 			}
 			else if(strcmp(mod,"add")==0){
-				sscanf(recv_str,"%*s %[^\n]",sendername);
-				memberctrl("add",sendername);
+                while(~sscanf(recv_str + readed ,"%s%n" , sendername , &ch_cnt))
+				    readed += ch_cnt , memberctrl("add",sendername);
                 //usleep(10000);
                 //sleep(1);
 				continue;
 			}
 			else if(strcmp(mod,"remove")==0){
-				sscanf(recv_str,"%*s %s",sendername);
+				sscanf(recv_str + readed ,"%s",sendername);
 				memberctrl("remove",sendername);
                 //usleep(10000);
 				continue;
@@ -302,6 +306,9 @@ void recemsg(void){
             usleep(10000);
 			redraw(1);
 		}
+        else{
+        //    puts("err");
+        }
 	}
 	return;
 }
