@@ -52,14 +52,14 @@ char IP[25];
 int ch;
 char non;//for getchar nothing
 int root = 0;// whether you have root competence
-
+//normal function
+char *trim(char *);
 ///function for socket
 void recemsg(void);
 void escape(int a);
 int cnt_host(void);
 void redraw(int mod);
 void memberctrl(char *mod,char *name);
-
 //var for curses
 int rooting = 0;
 WINDOW *win[7],*curwin,*rootwin;
@@ -238,8 +238,9 @@ void recemsg(void){
 				sprintf(output,"%s",string);
 			}
 			else if(strcmp(mod,"pw")==0){
+                //puts(string);
 				sscanf(recv_str + readed ,"%[^\n]",string);
-				if(strcmp(string,"accept")==0){
+				if(strcmp(trim(string),"accept")==0){
 					root=1;
 					pointer='#';
 					if(curwin==win[4]){
@@ -955,4 +956,11 @@ char* omitname(char *str){
 		sprintf(omitstr,"%.8s",str);
 	}
 	return omitstr;
+}
+char *trim(char *str){
+    int i = strlen(str) - 1;
+    while(str[i] == ' ') str[i--] = 0;
+    i = 0;
+    while(str[0] == ' ') str++;
+    return str;
 }
