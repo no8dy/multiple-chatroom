@@ -79,7 +79,7 @@ int terminal(WINDOW *twin , char *str , int n);//manipulate insert box
 void membermod(char *name);//for member win to select
 void selectmod(void);//for opinion win to select
 void rootmod(void);
-char* omitname(char *str);//if name>8char print "name8 ,  ,  , "
+char* omitname(char *str);//if name>8char print "name8 , , , "
 char omitstr[15];
 
 //start main program
@@ -180,7 +180,7 @@ int main(){
 		}
 		if(string[0]!='\0'){
 			if(strcmp(receivername , "All")==0){
-				sprintf(stroutput , "%s %s" ,  PUBC_MSG , string);
+				sprintf(stroutput , "%s %s" , PUBC_MSG , string);
 			}
 			else{
 				sprintf(stroutput , "%s %s %s" , PRVT_MSG , receivername , string);
@@ -219,7 +219,7 @@ void recemsg(void){
 	char mod[10] , sendername[10];
 	while(1){
 	// Receive message from the server and print to screen
-		len = recv(serverfd ,  recv_str ,  sizeof(recv_str) , 0);
+		len = recv(serverfd , recv_str , sizeof(recv_str) , 0);
 		if(len==0){
 			escape(2);
 			break;
@@ -389,16 +389,16 @@ int cnt_host(void){
 	scanf("%d" , &PORT);
 
 	/* create socket */
-	serverfd = socket(PF_INET ,  SOCK_STREAM ,  0);
+	serverfd = socket(PF_INET , SOCK_STREAM , 0);
 
 	/* initialize value in dest0 */
-	bzero(&dest0 ,  sizeof(dest0));
+	bzero(&dest0 , sizeof(dest0));
 	dest0.sin_family = PF_INET;
 	dest0.sin_port = htons(PORT);
-	inet_aton(IP ,  &dest0.sin_addr);
+	inet_aton(IP , &dest0.sin_addr);
 
 	/* Connecting to server */
-	if(connect(serverfd ,  (struct sockaddr*)&dest0 ,  sizeof(dest0))==-1){
+	if(connect(serverfd , (struct sockaddr*)&dest0 , sizeof(dest0))==-1){
 		puts("connect()==-1");
 		return -1;
 	}
@@ -506,8 +506,8 @@ void redraw(int mod){
 	return;
 }
 int terminal(WINDOW *twin , char *str , int n){
-	char *ostr ,  ec ,  kc;
-	int c ,  oldx ,  remain;
+	char *ostr , ec , kc;
+	int c , oldx , remain;
 	int prex , prey;
 	int i;
 	ostr = str;
@@ -520,17 +520,17 @@ int terminal(WINDOW *twin , char *str , int n){
 	while ((c = wgetch(twin)) != ERR && c != '\n' && c != '\r') {
 
 		*str = c;
-		touchline(twin ,  twin->_cury ,  1);
+		touchline(twin , twin->_cury , 1);
 		if (c == ec || c == KEY_BACKSPACE || c==263 || c==127 || c==8) {
 			*str = '\0';
 			if (str != ostr) {
 				/* getch() displays the key sequence */
-				if(mvwaddch(twin ,  twin->_cury ,  twin->_curx - 1 , ' ')==ERR){
+				if(mvwaddch(twin , twin->_cury , twin->_curx - 1 , ' ')==ERR){
 					if(mvwaddch(twin , twin->_cury-1 , twin->_maxx , ' ')==ERR){
 					//DEBUG
 					}
 				}
-				if(wmove(twin ,  twin->_cury ,  twin->_curx - 1)==ERR){
+				if(wmove(twin , twin->_cury , twin->_curx - 1)==ERR){
 					if(wmove(twin , twin->_cury-1 , twin->_maxx)==ERR){
 					//DEBUG
 					}
@@ -546,15 +546,15 @@ int terminal(WINDOW *twin , char *str , int n){
 			*str = '\0';
 			if (str != ostr) {
 				/* getch() displays the kill character */
-//				if(mvwaddch(twin ,  twin->_cury ,  twin->_curx - 1 ,  ' ')==ERR)
+//				if(mvwaddch(twin , twin->_cury , twin->_curx - 1 , ' ')==ERR)
 //					mvwaddch(twin , twin->_cury-1 , twin->_maxx , ' ');
 				/* Clear the characters from screen and str */
 				while (str != ostr) {
-					if(mvwaddch(twin ,  twin->_cury ,  twin->_curx - 1 , ' ')==ERR){
+					if(mvwaddch(twin , twin->_cury , twin->_curx - 1 , ' ')==ERR){
 						if(mvwaddch(twin , twin->_cury-1 , twin->_maxx , ' ')==ERR){
 						}
 					}
-					if(wmove(twin ,  twin->_cury ,  twin->_curx - 1)==ERR){
+					if(wmove(twin , twin->_cury , twin->_curx - 1)==ERR){
 						if(wmove(twin , twin->_cury-1 , twin->_maxx)==ERR){
 						}
 					}
@@ -565,8 +565,8 @@ int terminal(WINDOW *twin , char *str , int n){
 				}
 			} else
 			/* getch() displays the kill character */
-				mvwaddch(twin ,  twin->_cury ,  oldx ,  ' ');
-				wmove(twin ,  twin->_cury ,  oldx);
+				mvwaddch(twin , twin->_cury , oldx , ' ');
+				wmove(twin , twin->_cury , oldx);
 			
 		} 
 		else if (c == '\t' || c==27){
@@ -643,14 +643,14 @@ int terminal(WINDOW *twin , char *str , int n){
 		}
 		else if(c>=KEY_MIN&&c<= KEY_MAX){}//disable other function key
 		else if(c>=32 && c<=126){
-			mvwaddch(twin ,  twin->_cury ,  twin->_curx , c);//good job	
+			mvwaddch(twin , twin->_cury , twin->_curx , c);//good job	
 			wrefresh(win[1]);
 			if (remain) {
 				str++;
 				remain--;
 			} else {
-				mvwaddch(twin ,  twin->_cury ,  twin->_curx - 1 ,  ' ');//
-				wmove(twin ,  twin->_cury ,  twin->_curx - 1);
+				mvwaddch(twin , twin->_cury , twin->_curx - 1 , ' ');//
+				wmove(twin , twin->_cury , twin->_curx - 1);
 			}
 		}		
 		wrefresh(win[1]);
@@ -673,7 +673,7 @@ void membermod(char *name){
 	static int cursor=0;
 	curwin=win[2];
     if(client[memberlist[cursor]].name[0] == '\0')
-        cursor--;/*avoid the user being removed ,  s.t. point nothing */
+        cursor--;/*avoid the user being removed , s.t. point nothing */
 	mvwprintw(win[2] , cursor-onlinetop , 2 , "%c" , pointer);
 	special(A_REVERSE , win[2] , cursor-onlinetop , 4 , omitname(client[memberlist[cursor]].name));
 	wrefresh(win[2]);
