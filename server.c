@@ -1,6 +1,6 @@
-#define FILEROUTE "~/chat_history/server.txt"
-#define DATAROUTE "~/chat_history/"
-#define CLIENTNUM 21  /* leave one to refuse */
+#include"setting.h"
+#define FILENAME "server.txt"
+#define FILE_ROUTE LOG_DIR FILENAME 
 /* add stdio.h automatically */
 #include<curses.h> 
 #include<sys/socket.h>
@@ -80,12 +80,12 @@ int main(void){
     puts("wait connections...");
 
     //build history data
-//    sprintf(command  , "if [ ! -d %s ];then mkdir %s;fi" ,  DATAROUTE , DATAROUTE);
+//    sprintf(command  , "if [ ! -d %s ];then mkdir %s;fi" ,  LOG_DIR , LOG_DIR);
 //    system(command);
 //
-//    sprintf(command , "date >> %s" , FILEROUTE);
+//    sprintf(command , "date >> %s" , FILE_ROUTE);
 //    system(command);
-//    sprintf(command , "hostname | nslookup >> %s" , FILEROUTE);
+//    sprintf(command , "hostname | nslookup >> %s" , FILE_ROUTE);
 //    system(command);
 
     while(1){
@@ -140,7 +140,7 @@ void wall(char *sender , char *str){
     puts(history[curline++]);
     for(i = 0 ; i < CLIENTNUM ; i++)
         if(~client[i].fd)
-            sprintf(send_str , "public %s %s" , sender , str) , 
+            sprintf(send_str , "%s %s %s" , PUBC_MSG , sender , str) , 
                 send(client[i].fd , send_str , sizeof(send_str) , 0) < 0 ?
                     printf("send %s failed\n" , client[i].name) : 0;
     return;
@@ -154,7 +154,7 @@ void writeto(char *sender , char *receiver , char *str){
     for(i = 0 ; i < CLIENTNUM ; i++)
         if(( (!strcmp(receiver , client[i].name)) ||
                     (!strcmp(sender , client[i].curname)) ) && (~client[i].fd))
-            sprintf(send_str , "private (%s to %s)~%s" , sender , receiver , str)  , 
+            sprintf(send_str , "%s (%s to %s)~%s" , PRVT_MSG , sender , receiver , str)  , 
                 send(client[i].fd , send_str , sizeof(send_str) , 0) <= 0 ?
                     printf("send %s failed\n" , client[i].name) : 0;
     return;
@@ -167,8 +167,8 @@ void member_ctrl(char *mod , char *name){
     for(man_loc = 0 ; man_loc < CLIENTNUM ; man_loc++)
         if(!strcmp(client[man_loc].name , name)) break;
     /* send new member a list contains all members*/
-    if(!strcmp(mod , "all")){
-        sprintf(send_str , "add");
+    if(!strcmp(mod , INI_LIST)){
+        sprintf(send_str , ADD_LIST);
         for(i = 0 ; i < CLIENTNUM ; i++)
             if((~client[i].fd) && (i != man_loc))
                 sprintf(send_str , "%s %s" , send_str , client[i].name);
@@ -212,7 +212,7 @@ void close_server(void){
     int i;
     wall("root" , "server will close after 5 seconds");
     printf("will quit after 5 seconds\n5\n");
-    sprintf(command , "echo \"server closed\" >> %s" , FILEROUTE);
+    sprintf(command , "echo \"server closed\" >> %s" , FILE_ROUTE);
     system(command);
     for(i = 4 ; i >= 0 ; i--)
         sleep(1) , printf("%d\n" , i);
@@ -240,59 +240,54 @@ void recv_msg(void *num){
         else if(len > 0){	
             int readed = 0 , ch_cnt = 0;
             sscanf(msg_str , "%s%n" , command , &readed);
-            if(!strcmp(command , "wall")){
+            if(!strcmp(command , PUBC_MSG)){
                 wall(client[idx].curname , msg_str + readed);
             } 
-            else if(strcmp(command , "write")==0){
+            else if(!strcmp(command , PRVT_MSG)){
                 sscanf(msg_str + readed , "%s%n" , man , &ch_cnt) , readed += ch_cnt;
                 writeto(client[idx].curname , man , msg_str + readed);
             }
-            else if(!strcmp(command , "pw")){
+            else if(!strcmp(command , TRYTO_SU)){
                 printf("%s is trying to login as root\n" , client[idx].name);
+                sprintf(send_str , "%s %s" , TRYTO_SU , 
+                        strcmp(trim(msg_str + readed) , root_pw) ? SU_ST_RF : SU_ST_AC);
                 if(!strcmp(trim(msg_str + readed) , root_pw)){
-                    send(client[idx].fd , "pw accept" , sizeof("pw accept") , 0);
-                    printf("%s login successfully\n" , client[idx].name);
                     sprintf(history[curline] , "%s login as root" , client[idx].name);
-                    curline++;
+                    puts(history[curline++]);
                 }
                 else{
-                    send(client[idx].fd , "pw refuse" , sizeof("pw refuse") , 0);
                     printf("'%s' != '%s'\n" , msg_str + readed , root_pw);
-                    printf("%s login failed\n" , client[idx].name);
+                    printf("%s su failed\n" , client[idx].name);
                 }
+                send(client[idx].fd , send_str , sizeof(send_str) , 0);
             }
-            else if(!strcmp(command , "change")){
-                if(!strcmp(trim(msg_str + readed) , "root")){
-                    strcpy(client[idx].curname , "root");
-                }
-                else{
-                    strcpy(client[idx].curname , client[idx].name);
-                }
+            else if(!strcmp(command , CH_IDNTY)){
+                strcpy(client[idx].curname , trim(msg_str + readed));
                 printf("%s's curname is %s\n" , client[idx].name , client[idx].curname);
             }
-            else if(!strcmp(command , "hide")){
-                sprintf(send_str , "remove %s" , client[idx].name);
+            else if(!strcmp(command , HIDE_SLF)){
+                sprintf(send_str , "%s %s" , RMV_LIST , client[idx].name);
                 send_cmd_all(send_str , sizeof(send_str) , idx);
             }
-            else if(!strcmp(command , "unhide")){
-                sprintf(send_str , "add %s" , client[idx].name);
+            else if(!strcmp(command , U_HD_SLF)){
+                sprintf(send_str , "%s %s" , ADD_LIST , client[idx].name);
                 send_cmd_all(send_str , sizeof(send_str) , idx);
             }
-            else if(strcmp(command , "hideroot")==0){
-                sprintf(send_str , "remove root");
+            else if(!strcmp(command , HIDE_ROT)){
+                sprintf(send_str , "%s root" , RMV_LIST);
                 send_cmd_all(send_str , sizeof(send_str) , -1);
             }
-            else if(strcmp(command , "unhideroot")==0){
-                sprintf(send_str , "add root");
+            else if(!strcmp(command , U_HD_ROT)){
+                sprintf(send_str , "%s root" , ADD_LIST);
                 send_cmd_all(send_str , sizeof(send_str) , -1);
             }
-            else if(strcmp(command , "kick")==0){
+            else if(!strcmp(command , KICK_MAN)){
                 printf("recv kick msg from %s\n" , client[idx].name);
                 kick(msg_str + readed);
             }
-            else if(strcmp(command , "shutdown")==0){
+            else if(!strcmp(command , SHUTDOWN)){
                 printf("%s shutdown server" , client[idx].name);
-                sprintf(command , "echo \"%s close server\" >> %s" , client[idx].name , FILEROUTE);
+                sprintf(command , "echo \"%s close server\" >> %s" , client[idx].name , FILE_ROUTE);
                 system(command);
                 pthread_create(&shutdownid , NULL , (void *)close_server , NULL);
             }
@@ -307,21 +302,20 @@ void recv_msg(void *num){
                 }
                 for(i=0;i<CLIENTNUM;i++){
                     if((i!=idx)&&client[i].fd!=-1&&(strcmp(client[idx].name , client[i].name)==0)){
-                        send(client[idx].fd , "sys Name has been used" , sizeof("sys Name has been used") , 0);
-                        printf("client[%d] repeat name\n" , idx);
+                        sprintf(send_str , "%s %s" , SYST_MSG , "Username Invalid");
+                        send(client[idx].fd , send_str , sizeof(send_str) , 0);
                         endsub=1;
                         break;
                     }
                 }
-                if(endsub==1){
+                if(endsub)
                     break;
-                }
                 printf("client[%d] %s fd=%d has already connected\n" , idx , client[idx].name , client[idx].fd);
                 sprintf(history[curline] , "%s connected" , client[idx].name);
                 curline++;
                 strcpy(client[idx].curname , client[idx].name);
-                member_ctrl("add" , client[idx].name);
-                member_ctrl("all" , client[idx].name);
+                member_ctrl(ADD_LIST , client[idx].name);
+                member_ctrl(INI_LIST , client[idx].name);
             }
         }
         else{
@@ -335,7 +329,7 @@ void recv_msg(void *num){
     // Close connection 
     close(client[idx].fd);
     client[idx].fd = -1;
-    member_ctrl("remove" , client[idx].name);
+    member_ctrl(RMV_LIST , client[idx].name);
     client[idx].curname[0] = '\0';//be careful it should after remove
     client[idx].name[0]='\0';	
     pthread_exit(0);
@@ -386,10 +380,10 @@ void command_thread(void){
         else if(strcmp(what , "save")==0){
 
             if(curline>0){
-                sprintf(cmd , "date >> %s" , FILEROUTE);
+                sprintf(cmd , "date >> %s" , FILE_ROUTE);
                 system(cmd);
                 for(i=0;i<curline;i++){
-                    sprintf(cmd , "echo \"%s\" >> %s" , history[i] , FILEROUTE);
+                    sprintf(cmd , "echo \"%s\" >> %s" , history[i] , FILE_ROUTE);
                     system(cmd);
                 }
                 curline=0;
@@ -433,10 +427,10 @@ void command_thread(void){
 void auto_save(void){
     int i;
     if(curline==300){
-        sprintf(command , "date >> %s" , FILEROUTE);
+        sprintf(command , "date >> %s" , FILE_ROUTE);
         system(command);
         for(i=0;i<300;i++){
-            sprintf(command , "echo \"%s\" >> %s" , history[i] , FILEROUTE);
+            sprintf(command , "echo \"%s\" >> %s" , history[i] , FILE_ROUTE);
             system(command);
         }
         curline = 0;
@@ -447,7 +441,6 @@ void auto_save(void){
 char *trim(char *str){
     int i = strlen(str) - 1;
     while(str[i] == ' ') str[i--] = 0;
-    i = 0;
     while(str[0] == ' ') str++;
     return str;
 }

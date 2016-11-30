@@ -10,4 +10,4 @@ all:
 	gcc server.c -o server -pthread #-lsocket -lnsl
 	gcc client.c -o client -pthread -lcurses -DNCURSES_INTERNALS -DNCURSES_OPAQUE=0 #-lsocket -lnsl 
 clean:
-	rm server client
+	rm -f server client
