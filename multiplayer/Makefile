@@ -7,7 +7,7 @@
 											#define NCURSES_OPAQUE 1
 											#endif => -DNCURSES_INTERNALS
 all:
-	gcc server.c -o server -pthread #-lsocket -lnsl
-	gcc client.c -o client -pthread -lcurses -DNCURSES_INTERNALS -DNCURSES_OPAQUE=0 #-lsocket -lnsl 
+	gcc server.c -g -o server -pthread #-lsocket -lnsl
+	gcc client.c -g -o client -pthread -lcurses -DNCURSES_INTERNALS -DNCURSES_OPAQUE=0 #-lsocket -lnsl 
 clean:
 	rm -f server client

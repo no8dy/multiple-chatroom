@@ -1,8 +1,8 @@
 #include"setting.h"
 #define FILENAME "server.txt"
-#define FILE_ROUTE LOG_DIR FILENAME 
+#define FILE_ROUTE LOG_DIR FILENAME
 /* add stdio.h automatically */
-#include<curses.h> 
+#include<curses.h>
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<sys/types.h>
@@ -58,7 +58,7 @@ int main(void){
     struct sockaddr_in chatroom_addr , client_addr;
     printf("Input port(ex:8889):") , scanf("%d" , &svr_port);
 
-    /* create socket */	
+    /* create socket */
     sockfd = socket(PF_INET , SOCK_STREAM , 0);
     if(!(~sockfd))
         puts("create socket failed") , exit(1);
@@ -94,17 +94,17 @@ int main(void){
 //    system(g_cmd);
 
     while(1){
-        /* find a space that can add new member */ 
+        /* find a space that can add new member */
         for(i = 0 ; i < CLIENTNUM ; i++)
             if(!(~client[i].fd)) break;
 
         printf("space = %d\n" , i);
         /* Wait and Accept connection */
-        /* I don't store client info , so the nd rd = NULL */	
+        /* I don't store client info , so the nd rd = NULL */
         len = sizeof(client_addr);
         client[i].fd = accept(sockfd , (struct sockaddr*)&client_addr , &len);
         if(online==CLIENTNUM - 1){
-            combsend(client[i].fd , g_sd_str , sizeof(g_sd_str) , "%s No space in chatroom" , SYST_MSG); 
+            combsend(client[i].fd , g_sd_str , sizeof(g_sd_str) , "%s No space in chatroom" , SYST_MSG);
             close(client[i].fd) , client[i].fd = -1;
         }
         else{
@@ -112,7 +112,7 @@ int main(void){
                 printf("create client[%d] thread failed\n" , i );
                 client[i].fd = -1;
             }
-            /* sleep two sec , or the "i" passed into thread 
+            /* sleep two sec , or the "i" passed into thread
              * will be revised by loop */
             sleep(2);
         }
@@ -126,7 +126,7 @@ int cancel_recv_thread(int nth){
         printf("cancel pthread failed!") , rtn = -1;
     else{
         online--;
-        close(client[nth].fd);	
+        close(client[nth].fd);
         client[nth].fd = -1;
         member_ctrl(RMV_LIST , client[nth].name);
         client[nth].curname[0] = 0;
@@ -185,7 +185,7 @@ void kick(char *man){
     for(i = 0 ; i < CLIENTNUM ; i++)
         if(!strcmp(man , client[i].name)){
             if(!cancel_recv_thread(i))
-                printf("%s is kicked\n" , man) , 
+                printf("%s is kicked\n" , man) ,
                     sprintf(history[curline++] , "%s is kicked" , man);
             else
                 if(!strcmp(man , "All"))
@@ -225,7 +225,7 @@ void recv_msg(void *num){
     pthread_setcanceltype( PTHREAD_CANCEL_ASYNCHRONOUS , NULL);
 
     while(1){
-        /* record history */ 	
+        /* record history */
         auto_save();
         len = recv(client[idx].fd , msg_str , sizeof(msg_str) , 0);
         if(!len){
@@ -234,19 +234,22 @@ void recv_msg(void *num){
             curline++;
             break;
         }
-        else if(len > 0){	
+        else if(len > 0){
             int readed = 0 , ch_cnt = 0;
+            puts(msg_str);
+            g_cmd[0] = '\0';//tricky
             sscanf(msg_str , "%s%n" , g_cmd , &readed);
+            printf("recv command [%s] from %d\n" , msg_str , idx);
             if(!strcmp(g_cmd , PUBC_MSG)){
                 wall(client[idx].curname , msg_str + readed);
-            } 
+            }
             else if(!strcmp(g_cmd , PRVT_MSG)){
                 sscanf(msg_str + readed , "%s%n" , man , &ch_cnt) , readed += ch_cnt;
                 writeto(client[idx].curname , man , msg_str + readed);
             }
             else if(!strcmp(g_cmd , TRYTO_SU)){
                 printf("%s is trying to login as root\n" , client[idx].name);
-                combsend(client[idx].fd , g_sd_str , sizeof(g_sd_str) , "%s %s" , TRYTO_SU , 
+                combsend(client[idx].fd , g_sd_str , sizeof(g_sd_str) , "%s %s" , TRYTO_SU ,
                         strcmp(trim(msg_str + readed) , root_pw) ? SU_ST_RF : SU_ST_AC);
 
                 if(!strcmp(trim(msg_str + readed) , root_pw)){
@@ -288,9 +291,17 @@ void recv_msg(void *num){
                 pthread_create(&shutdown_id , NULL , (void *)close_server , NULL);
             }
             else if(!strcmp(g_cmd , "name")){
-                if(sscanf(msg_str + readed , "%s" , client[idx].name)!=1){
-                    send(client[idx].fd , "sys No Name? Bazinga" , sizeof("sys No Name? Bazinga") , 0);
+                int rtn = 0;
+                static int k = 0;
+                printf("count = %d\n" , k++);
+                printf("msg(%s) + %d = '%s'\n" , msg_str , readed , msg_str + readed);
+                if((rtn = sscanf(msg_str + readed + 1 , "%s" , client[idx].name))!=1){
+                    printf("val = %d\n" , rtn);
+                    send(client[idx].fd , "sys What's your name" , sizeof("sys No Name? Bazinga") , 0);
                     break;
+                }
+                else{
+                    printf("%s connect successfully\n" , client[idx].name);
                 }
                 if(!strcmp(client[idx].name , "root")){
                     send(client[idx].fd , "sys Name can't be \"root\"" , sizeof("sys Name can't be \"root\"") , 0);
@@ -316,31 +327,31 @@ void recv_msg(void *num){
         else{
             printf("receive error msg[%d] from %s\n" , len , client[idx].name);
             printf("who fd is %d\n" , client[idx].fd);
-            break; 
+            break;
         }
     }
 
     online--;//if client break by himself
-    // Close connection 
+    // Close connection
     close(client[idx].fd);
     client[idx].fd = -1;
     member_ctrl(RMV_LIST , client[idx].name);
     client[idx].curname[0] = '\0';//be careful it should after remove
-    client[idx].name[0]='\0';	
+    client[idx].name[0]='\0';
     pthread_exit(0);
     sprintf(history[curline] , "%s leave" , client[idx].name);
     curline++;
     return;
 }
-void cmd_thread(void){	
-    int i; /* g_cmd line for root */ 
+void cmd_thread(void){
+    int i; /* g_cmd line for root */
     char what[30] , who[30] , string[300];
-    setbuf(stdin , NULL);	
+    setbuf(stdin , NULL);
     while(1){
         fgets(g_cmd , sizeof(g_cmd) , stdin);
         setbuf(stdin , NULL);
         sscanf(g_cmd , "%s" , what);
-        if(!strcmp(what , WALL_MSG)){	
+        if(!strcmp(what , WALL_MSG)){
             sscanf(g_cmd , "%*s %[^\n]" , string);
             wall("root" , string);
         }

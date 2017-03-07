@@ -1,10 +1,10 @@
 #include"setting.h"
 #define FILENAME "client.txt"
 #define FILE_ROUTE LOG_DIR FILENAME
-/* include stdio.h by curses.h 
+/* include stdio.h by curses.h
  * automatically */
 
-#include<curses.h> 
+#include<curses.h>
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<stdlib.h>
@@ -26,7 +26,7 @@
 #include<stdarg.h>
 struct stat route;
 void storehistory(void);
-char command[350] , send_str[350];
+char command[250] , send_str[250];//350 error
 char fileroute[40];
 
 //var for socket
@@ -55,21 +55,21 @@ void redraw(int mod);
 void memberctrl(char *mod , char *name);
 //var for curses
 int rooting = 0;
-WINDOW *win[7] , 
-       *win_c , /* current win */                   
-       *rbox , /* root win */                      
-       *mbox , /* member list box */                 
-       *bbox , /* banner box */                       
-       *tbox , /* talk box */                       
-       *ibox , /* msg input box */                  
-       *wbox , /* msg to whom displayer */           
-       *obox , /* option box */                       
-       *pbox ; /* beside input box to print ps */      
+WINDOW *win[7] ,
+       *win_c , /* current win */
+       *rbox , /* root win */
+       *mbox , /* member list box */
+       *bbox , /* banner box */
+       *tbox , /* talk box */
+       *ibox , /* msg input box */
+       *wbox , /* msg to whom displayer */
+       *obox , /* option box */
+       *pbox ; /* beside input box to print ps */
 
-/*   bbox                    | mbox   */    
-/*  -------------------------|        */ 
+/*   bbox                    | mbox   */
+/*  -------------------------|        */
 /*   tbox   +----------+     |        */
-/*          |   rbox   |     |        */  
+/*          |   rbox   |     |        */
 /*          +----------+     |        */
 /*                           |        */
 /*  -------------------------|------  */
@@ -79,7 +79,7 @@ WINDOW *win[7] ,
 
 int mbox_t = 0;//the user current mbox top line point
 char history[300][300] = {"\0"};
-int tbox_t = 0;//for talk box 
+int tbox_t = 0;//for talk box
 int curline = 0;//for history
 int tbox_c = 0;//for talk bodx
 int x , y;
@@ -124,7 +124,6 @@ int main(){
         escape(1);
     }
 
-
     // use thread to listen msg //
     pthread_t id;
     int ret;
@@ -146,19 +145,18 @@ int main(){
 
     // start curses terminal
     int hch;//rbox ch for getch
-
     initial();
 
-/*   bbox                    | mbox                  */    
-/*  -------------------------|                       */ 
+/*   bbox                    | mbox                  */
+/*  -------------------------|                       */
 /*   tbox   +----------+     |                       */
-/*          |   rbox   |     |                       */  
+/*          |   rbox   |     |                       */
 /*          +----------+     |                       */
 /*                           |                       */
 /*  -------------------------|------                 */
 /*  pbox| ibox       ________| obox                  */
 /*      |           |  wbox  | ctrl-l to call rbox   */
-                                
+
 
     mbox = newwin(CLIENTNUM+2 , 12 , 0 , COLS-13);
     bbox = newwin(3 , COLS-13 , 0 , 0);
@@ -166,11 +164,13 @@ int main(){
     pbox = newwin(5 , 2 , LINES-5 , 0);
     ibox = newwin(5 , COLS-23 , LINES-5 , 2);
     obox = newwin(5 , 20 , LINES-5 , COLS-21);
-    wbox = newwin(1 , 15 , LINES-5+(win[1]->_maxy) , (win[1]->_maxx)-12);
+    wbox = newwin(1 , 15 , LINES-5+(ibox->_maxy) , (ibox->_maxx)-12);
 
     win[0] = tbox , win[1] = ibox , win[2] = mbox;
     win[3] = bbox , win[4] = obox , win[5] = wbox , win[6] = pbox;
 
+    for(i = 0 ; i < 7 ; i++)
+        if(win[i] == NULL) puts("NULL") , exit(1);
     keypad(tbox , TRUE);
     keypad(ibox , TRUE);
     keypad(mbox , TRUE);
@@ -188,7 +188,7 @@ int main(){
     redraw(0);//need win_c
     wmove(ibox , 1 , 0);
     mvwprintw(pbox , 1 , 0 , "%c" , ps);
-    wrefresh(pbox);	
+    wrefresh(pbox);
     wrefresh(ibox);
     mvwprintw(mbox , 0 , 4 , "All");
     wrefresh(mbox);
@@ -381,7 +381,7 @@ void memberctrl(char *mod , char *name){
         wrefresh(bbox);
     }
     for(i = 0;i<CLIENTNUM+1;i++){//clear names on member box
-        mvwWipen(mbox , i , 4 , 9); 
+        mvwWipen(mbox , i , 4 , 9);
         //mvwprintw(mbox , i , 4 , "         ");
     }
     for(i = mbox_t;i<= online;i++){
@@ -397,7 +397,7 @@ int cnt_host(void){
 
     printf("Input IP\n(ghsot = >ghost.cs.nccu.edu.tw)\n(cherry = >cherry.cs.nccu.edu.tw)\n(enter = >local):");
     fgets(IP , sizeof(IP) , stdin);
-    if(IP[0] == '\n'){	
+    if(IP[0] == '\n'){
         sprintf(IP , "127.0.0.1");
     }
     if(strcmp(IP , "ghost\n") == 0){
@@ -408,7 +408,7 @@ int cnt_host(void){
     }
     setbuf(stdin , NULL);
     printf("will connect to %s\n" , IP);
-    /* input port */	
+    /* input port */
     printf("Input port(ex:8889):");
     scanf("%d" , &PORT);
 
@@ -452,7 +452,7 @@ void mvwWipen(WINDOW *awin , int y , int x , int n){
 }
 
 void mvwAttrw(WINDOW *awin , int y , int x , int attrs , char *format , ... ){
-    char text[300];	
+    char text[300];
     wattron(awin , attrs);
     va_list arg;
     va_start(arg , format);
@@ -491,7 +491,7 @@ void redraw(int mod){
     mvwprintw(bbox , 1 , 0 , "===CHATROOM===");
 
     if(root == 1){
-        mvwprintw(bbox , 0 , 20 , "Administrator");	
+        mvwprintw(bbox , 0 , 20 , "Administrator");
         wrefresh(bbox);
     }
 
@@ -516,7 +516,7 @@ void redraw(int mod){
         //mvwAttrw(A_BOLD , wbox , 0 , 14-strlen(recvr_n) , recvr_n);
     }
     mvwprintw(bbox , 0 , 4 , "Hi!");
-    mvwWipen(bbox , 0 , 7 , 10); 
+    mvwWipen(bbox , 0 , 7 , 10);
     //mvwprintw(bbox , 0 , 7 , "          ");
     mvwAttrw(bbox , 0 , 7 , A_BOLD , "%s" , cur_id);
     //mvwAttrw(A_BOLD , bbox , 0 , 7 , cur_id);
@@ -582,7 +582,7 @@ int terminal(WINDOW *twin , char *str , int n){
                     /* We're counting chars */
                     remain++;
                 }
-            } 
+            }
         } else if (c  ==  kc) {
             *str = '\0';
             if (str !=  ostr) {
@@ -609,7 +609,7 @@ int terminal(WINDOW *twin , char *str , int n){
                 mvwaddch(twin , twin->_cury , oldx , ' ');
             wmove(twin , twin->_cury , oldx);
 
-        } 
+        }
         else if (c  ==  '\t' || c == 27){
             prey = twin->_cury;//record text position
             prex = twin->_curx;
@@ -685,7 +685,7 @@ int terminal(WINDOW *twin , char *str , int n){
         }
         else if(c>= KEY_MIN&&c<=  KEY_MAX){}//disable other function key
         else if(c>= 32 && c<= 126){
-            mvwaddch(twin , twin->_cury , twin->_curx , c);//good job	
+            mvwaddch(twin , twin->_cury , twin->_curx , c);//good job
             wrefresh(ibox);
             if (remain) {
                 str++;
@@ -694,7 +694,7 @@ int terminal(WINDOW *twin , char *str , int n){
                 mvwaddch(twin , twin->_cury , twin->_curx - 1 , ' ');//
                 wmove(twin , twin->_cury , twin->_curx - 1);
             }
-        }		
+        }
         wrefresh(ibox);
         touchwin(wbox);
         wrefresh(wbox);
@@ -725,7 +725,7 @@ void membermod(char *name){
         mvwprintw(win_c , mbr_c-mbox_t , 2 , " ");
         if(input == '\r' || input == '\n'){
             strcpy(name , clt[mbr_ls[mbr_c]].name);
-            mvwWipen(wbox , 0 , 0 , 10); 
+            mvwWipen(wbox , 0 , 0 , 10);
             //mvwprintw(wbox , 0 , 0 , "          ");
             mvwAttrw(wbox , 0 , 10 - strlen(name) , A_BOLD , " To %s" , name);
             //			mvwAttrw(A_BOLD , wbox , 0 , 10-strlen(name) , " To ");
@@ -736,7 +736,7 @@ void membermod(char *name){
         }
         else{
             mvwprintw(win_c , mbr_c-mbox_t , 4 , "%s" , omit_id(clt[mbr_ls[mbr_c]].name));
-            if(input == KEY_UP){	
+            if(input == KEY_UP){
                 if(mbr_c>0){
                     mbr_c--;
                 }
@@ -766,7 +766,7 @@ void membermod(char *name){
         }
         else{
             mvwprintw(obox , 0 , 12 , "-");
-        }	
+        }
         wrefresh(win_c);
         touchwin(obox);
         wrefresh(obox);//wait to check
@@ -818,7 +818,7 @@ void selectmod(void){
             }
         }
         mvwprintw(obox , selecter , 2 , "%c" , ps);
-        wrefresh(obox);	
+        wrefresh(obox);
     }
     return;
 }
@@ -896,7 +896,7 @@ void rootmod(void){
                     mvwprintw(rbox , 1 , 5 , "Change ID as         ");//%*c" , sizeof(my_id) , ' ');
                     mvwprintw(rbox , 8 , 9 , "Cur_ID:         ");//" , sizeof(changename) , ' ');
                     mvwprintw(rbox , 1 , 5 , "Change ID as %s" , strcmp(cur_id , my_id) == 0?"root":my_id);
-                    mvwprintw(rbox , 8 , 9 , "Cur_ID:%s" , cur_id);	
+                    mvwprintw(rbox , 8 , 9 , "Cur_ID:%s" , cur_id);
                     mvwprintw(bbox , 0 , 4 , "Hi!");
                     mvwWipen(bbox , 0 , 7 , 10);
                     //mvwprintw(bbox , 0 , 7 , "          ");
@@ -919,7 +919,7 @@ void rootmod(void){
                 }
                 else if(opt == 3){
                     if(hideroot == 0){
-                        hideroot = 1-hideroot;	
+                        hideroot = 1-hideroot;
                         send(svr_fd , HIDE_ROT , sizeof(HIDE_ROT) , 0);
                         mvwprintw(rbox , 3 , 5 , "Show root ID");
                     }
@@ -952,7 +952,7 @@ void rootmod(void){
                     if(hideroot == 0){
                         hideroot = 1;
                         send(svr_fd , HIDE_ROT , sizeof(HIDE_ROT) , 0);
-                    }	
+                    }
                     ps = '$';
                     root = 0;
                     mvwWipen(bbox , 0 , 20 , 13);
@@ -1006,6 +1006,7 @@ ssize_t combsend(int fd , char *msg , unsigned int msg_t , char *format , ... ){
     vsnprintf(msg , msg_t , format , arg);
     va_end(arg);
     send(fd , msg , msg_t , 0);
+    printf("send %s \n" , msg);
 }
 
 char *omit_id(char *str){
@@ -1015,6 +1016,7 @@ char *omit_id(char *str){
         sprintf(omitstr , "%.8s" , str);
     return omitstr;
 }
+
 char *trim(char *str){
     int i = strlen(str) - 1;
     while(str[i]  ==  ' ') str[i--] = 0;
