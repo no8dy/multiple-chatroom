@@ -2,7 +2,8 @@
 /* for server.c , one for refuse */
 #define CLIENTNUM 21
 /* file setting */
-#define LOG_DIR "~/chat_history/"
+//#define LOG_DIR "~/chat_history/"
+#define LOG_DIR "./chat_history/"
 /* command below*/
 /* BOTH */
 #define PUBC_MSG "wall"
@@ -54,5 +55,5 @@ const char OPTION[OPTN_NUM][20] = {
     "Write message" ,
     "Choose member" ,
     "Store history" ,
-    "Exit chatroom" 
+    "Exit chatroom"
 };

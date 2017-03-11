@@ -1006,7 +1006,6 @@ ssize_t combsend(int fd , char *msg , unsigned int msg_t , char *format , ... ){
     vsnprintf(msg , msg_t , format , arg);
     va_end(arg);
     send(fd , msg , msg_t , 0);
-    printf("send %s \n" , msg);
 }
 
 char *omit_id(char *str){

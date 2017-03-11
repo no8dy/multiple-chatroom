@@ -9,6 +9,8 @@
 #include<sys/stat.h>
 #include<unistd.h>
 #include<pthread.h>
+#include<dirent.h>
+#include<errno.h>
 
 #include<stdlib.h>
 #include<string.h>
@@ -49,6 +51,13 @@ ssize_t combsend(int fd , char *msg , unsigned int msg_t , char *format , ... );
 
 /* start main program */
 int main(void){
+
+    if(chdir(LOG_DIR)){
+        puts("will make directory in your home directory...");
+        if(mkdir(LOG_DIR , 0700))
+            printf("make directory[%s] failed\n" , LOG_DIR) , exit(0);
+        printf("directory[%s] has made\n" , LOG_DIR);
+    }
 
     int i , len;
 
@@ -236,7 +245,6 @@ void recv_msg(void *num){
         }
         else if(len > 0){
             int readed = 0 , ch_cnt = 0;
-            puts(msg_str);
             g_cmd[0] = '\0';//tricky
             sscanf(msg_str , "%s%n" , g_cmd , &readed);
             printf("recv command [%s] from %d\n" , msg_str , idx);
@@ -294,7 +302,6 @@ void recv_msg(void *num){
                 int rtn = 0;
                 static int k = 0;
                 printf("count = %d\n" , k++);
-                printf("msg(%s) + %d = '%s'\n" , msg_str , readed , msg_str + readed);
                 if((rtn = sscanf(msg_str + readed + 1 , "%s" , client[idx].name))!=1){
                     printf("val = %d\n" , rtn);
                     send(client[idx].fd , "sys What's your name" , sizeof("sys No Name? Bazinga") , 0);
