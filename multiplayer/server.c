@@ -1,6 +1,5 @@
 #include"setting.h"
 #define FILENAME "server.txt"
-#define FILE_ROUTE LOG_DIR FILENAME
 /* add stdio.h automatically */
 #include<curses.h>
 #include<sys/socket.h>
@@ -48,15 +47,18 @@ char *trim(char *);
 void send_cmd_all(char * , unsigned int , int);
 int combsys(char *cmd , unsigned int cmd_t , char *format , ... );
 ssize_t combsend(int fd , char *msg , unsigned int msg_t , char *format , ... );
+int combfw(char *str , unsigned int str_t , char *format , ... );
+void time_log(void);
 
 /* start main program */
 int main(void){
 
     if(chdir(LOG_DIR)){
         puts("will make directory in current directory...");
-        if(mkdir(LOG_DIR , 0700))
+        if(mkdir(LOG_DIR , 0770))
             printf("make directory[%s] failed\n" , LOG_DIR) , exit(0);
         printf("directory[%s] has made\n" , LOG_DIR);
+        chdir(LOG_DIR);
     }
 
     int i , len;
@@ -94,10 +96,9 @@ int main(void){
     puts("wait connections...");
 
     //build history data
-    sprintf(g_cmd , "date >> %s" , FILE_ROUTE);
-    system(g_cmd);
-    sprintf(g_cmd , "hostname | nslookup >> %s" , FILE_ROUTE);
-    system(g_cmd);
+    time_log();
+    puts("logged");
+    combsys(g_cmd , sizeof(g_cmd) , "hostname | nslookup >> %s" , FILENAME);
 
     while(1){
         /* find a space that can add new member */
@@ -149,7 +150,7 @@ void wall(char *sender , char *str){
     for(i = 0 ; i < CLIENTNUM ; i++)
         if(~client[i].fd)
             combsend(client[i].fd , g_sd_str , sizeof(g_sd_str) , "%s %s %s" , PUBC_MSG , sender , str) < 0 ?
-                    printf("send %s failed\n" , client[i].name) : 0;
+                printf("send %s failed\n" , client[i].name) : 0;
     return;
 }
 void writeto(char *sender , char *receiver , char *str){
@@ -161,7 +162,7 @@ void writeto(char *sender , char *receiver , char *str){
         if(( (!strcmp(receiver , client[i].name)) ||
                     (!strcmp(sender , client[i].curname)) ) && (~client[i].fd))
             combsend(client[i].fd , g_sd_str , sizeof(g_sd_str) , "%s (%s to %s)~%s" , PRVT_MSG , sender , receiver , str) < 0 ?
-                    printf("send %s failed\n" , client[i].name) : 0;
+                printf("send %s failed\n" , client[i].name) : 0;
     return;
 }
 
@@ -216,7 +217,7 @@ void close_server(void){
     int i;
     wall("root" , "server will close after 5 seconds");
     printf("will quit after 5 seconds\n5\n");
-    combsys(g_cmd , sizeof(g_cmd) , "echo \"server closed\" >> %s" , FILE_ROUTE);
+    combfw(g_cmd , sizeof(g_cmd) , "server closed\n");
     for(i = 4 ; i >= 0 ; i--)
         sleep(1) , printf("%d\n" , i);
     quick_close_server();
@@ -292,7 +293,7 @@ void recv_msg(void *num){
             }
             else if(!strcmp(g_cmd , SHUTDOWN)){
                 printf("%s shutdown server" , client[idx].name);
-                combsys(g_cmd , sizeof(g_cmd) , "echo \"%s close server\" >> %s" , client[idx].name , FILE_ROUTE);
+                combfw(g_cmd , sizeof(g_cmd) , "%s close server\n" , client[idx].name);
                 pthread_create(&shutdown_id , NULL , (void *)close_server , NULL);
             }
             else if(!strcmp(g_cmd , "name")){
@@ -390,9 +391,9 @@ void cmd_thread(void){
         else if(!strcmp(what , SAVE_HIS)){
 
             if(curline>0){
-                combsys(g_cmd , sizeof(g_cmd) , "date >> %s" , FILE_ROUTE);
+                time_log();
                 for(i=0;i<curline;i++){
-                    combsys(g_cmd , sizeof(g_cmd) , "echo \"%s\" >> %s" , history[i] , FILE_ROUTE);
+                    combfw(g_cmd , sizeof(g_cmd) , "%s\n" , history[i]);
                 }
                 curline=0;
                 puts("saved");
@@ -428,9 +429,9 @@ void cmd_thread(void){
 void auto_save(void){
     int i;
     if(curline==300){
-        combsys(g_cmd , sizeof(g_cmd) , "date >> %s" , FILE_ROUTE);
+        time_log();
         for(i=0;i<300;i++){
-            combsys(g_cmd , sizeof(g_cmd) , "echo \"%s\" >> %s" , history[i] , FILE_ROUTE);
+            combfw(g_cmd , sizeof(g_cmd) , "%s\n" , history[i]);
         }
         curline = 0;
     }
@@ -452,6 +453,19 @@ void send_cmd_all(char *cmd , unsigned int cmd_size , int except_fd){
     return;
 }
 
+int combfw(char *str , unsigned int str_t , char *format , ... ){
+    va_list arg;
+    va_start(arg , format);
+    vsnprintf(str , str_t , format , arg);
+    va_end(arg);
+    FILE *fp;
+    fp = fopen(FILENAME , "a");
+    if(!fp) puts("file cannot open") , exit(1);
+    fprintf(fp , "%s" , str);
+    fclose(fp);
+    return 0;
+}
+
 int combsys(char *cmd , unsigned int cmd_t , char *format , ... ){
     va_list arg;
     va_start(arg , format);
@@ -466,4 +480,12 @@ ssize_t combsend(int fd , char *msg , unsigned int msg_t , char *format , ... ){
     vsnprintf(msg , msg_t , format , arg);
     va_end(arg);
     return send(fd , msg , msg_t , 0);
+}
+
+void time_log(void){
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    combfw(g_cmd , sizeof(g_cmd) , "login : %d-%d-%d %d:%d:%d\n" ,
+            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+            tm.tm_hour, tm.tm_min, tm.tm_sec);
 }

@@ -1,6 +1,6 @@
 #include"setting.h"
 #define FILENAME "client.txt"
-#define FILE_ROUTE LOG_DIR FILENAME
+
 /* include stdio.h by curses.h
  * automatically */
 
@@ -96,6 +96,7 @@ void rootmod(void);
 //normal function
 char *trim(char *);
 int combsys(char *cmd , unsigned int cmd_t , char *format , ... );
+int combfw(char *str , unsigned int str_t , char *format , ... );
 ssize_t combsend(int fd , char *msg , unsigned int msg_t , char *format , ... );
 char* omit_id(char *str);//if name>8char print "name8 , , , "
 char omitstr[15];
@@ -138,27 +139,33 @@ int main(){
     // build history data
     if(chdir(LOG_DIR)){
         puts("will make directory in current directory...");
-        if(mkdir(LOG_DIR , 0700))
+        if(mkdir(LOG_DIR , 0770))
             printf("make directory[%s] failed\n" , LOG_DIR) , exit(0);
         printf("directory[%s] has made\n" , LOG_DIR);
+        chdir(LOG_DIR);
     }
 
-    combsys(command , sizeof(command) , "date >> %s" , FILE_ROUTE);
-    combsys(command , sizeof(command) , "echo \"connected to %s:%d\" >> %s" , IP , PORT , FILE_ROUTE);
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    combfw(command , sizeof(command) , "login : %d-%d-%d %d:%d:%d\n" ,
+            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+            tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    combfw(command , sizeof(command) , "connected to %s:%d\n" ,IP , PORT);
 
     // start curses terminal
     int hch;//rbox ch for getch
     initial();
 
-/*   bbox                    | mbox                  */
-/*  -------------------------|                       */
-/*   tbox   +----------+     |                       */
-/*          |   rbox   |     |                       */
-/*          +----------+     |                       */
-/*                           |                       */
-/*  -------------------------|------                 */
-/*  pbox| ibox       ________| obox                  */
-/*      |           |  wbox  | ctrl-l to call rbox   */
+    /*   bbox                    | mbox                  */
+    /*  -------------------------|                       */
+    /*   tbox   +----------+     |                       */
+    /*          |   rbox   |     |                       */
+    /*          +----------+     |                       */
+    /*                           |                       */
+    /*  -------------------------|------                 */
+    /*  pbox| ibox       ________| obox                  */
+    /*      |           |  wbox  | ctrl-l to call rbox   */
 
 
     mbox = newwin(CLIENTNUM+2 , 12 , 0 , COLS-13);
@@ -307,7 +314,7 @@ void recv_msg(void){
             }
             if(curline == 300){
                 for(i = 0;i<300;i++){
-                    combsys(command , sizeof(command) , "echo \"%s\" >> %s" , history[i] , FILE_ROUTE);
+                    combfw(command , sizeof(command) , "%s\n" , history[i]);
                 }
                 curline = 0;
             }
@@ -630,7 +637,7 @@ int terminal(WINDOW *twin , char *str , int n){
             wrefresh(ibox);
 
         }
-        else if(c == 14){
+        else if(c == 14){//
             if(ps == '$'){
                 ps = '>';
             }
@@ -990,9 +997,22 @@ void rootmod(void){
 void storehistory(void){
     int i;
     for(i = 0;i<curline;i++)
-        combsys(command , sizeof(command) , "echo \"%s\" >> %s" , history[i] , FILE_ROUTE);
+        combfw(command , sizeof(command) , "%s\n" , history[i]);
     curline = 0;
     return;
+}
+
+int combfw(char *str , unsigned int str_t , char *format , ... ){
+    va_list arg;
+    va_start(arg , format);
+    vsnprintf(str , str_t , format , arg);
+    va_end(arg);
+    FILE *fp;
+    fp = fopen(FILENAME , "a");
+    if(!fp) printf("%s cannot open\n" , FILENAME) , exit(1);
+    fprintf(fp , "%s" , str);
+    fclose(fp);
+    return 0;
 }
 
 int combsys(char *cmd , unsigned int cmd_t , char *format , ... ){
@@ -1000,7 +1020,7 @@ int combsys(char *cmd , unsigned int cmd_t , char *format , ... ){
     va_start(arg , format);
     vsnprintf(cmd , cmd_t , format , arg);
     va_end(arg);
-    system(cmd);
+    return system(cmd);
 }
 
 ssize_t combsend(int fd , char *msg , unsigned int msg_t , char *format , ... ){
@@ -1008,7 +1028,7 @@ ssize_t combsend(int fd , char *msg , unsigned int msg_t , char *format , ... ){
     va_start(arg , format);
     vsnprintf(msg , msg_t , format , arg);
     va_end(arg);
-    send(fd , msg , msg_t , 0);
+    return send(fd , msg , msg_t , 0);
 }
 
 char *omit_id(char *str){
