@@ -136,9 +136,12 @@ int main(){
     combsend(svr_fd , send_str , sizeof(send_str) , "name %s" , cur_id);
 
     // build history data
-    if(stat(LOG_DIR , &route) == 0)
-        combsys(command , sizeof(command) , "mkdir %s" , LOG_DIR);
-
+    if(chdir(LOG_DIR)){
+        puts("will make directory in current directory...");
+        if(mkdir(LOG_DIR , 0700))
+            printf("make directory[%s] failed\n" , LOG_DIR) , exit(0);
+        printf("directory[%s] has made\n" , LOG_DIR);
+    }
 
     combsys(command , sizeof(command) , "date >> %s" , FILE_ROUTE);
     combsys(command , sizeof(command) , "echo \"connected to %s:%d\" >> %s" , IP , PORT , FILE_ROUTE);

@@ -53,7 +53,7 @@ ssize_t combsend(int fd , char *msg , unsigned int msg_t , char *format , ... );
 int main(void){
 
     if(chdir(LOG_DIR)){
-        puts("will make directory in your home directory...");
+        puts("will make directory in current directory...");
         if(mkdir(LOG_DIR , 0700))
             printf("make directory[%s] failed\n" , LOG_DIR) , exit(0);
         printf("directory[%s] has made\n" , LOG_DIR);
@@ -94,13 +94,10 @@ int main(void){
     puts("wait connections...");
 
     //build history data
-//    sprintf(g_cmd  , "if [ ! -d %s ];then mkdir %s;fi" , LOG_DIR , LOG_DIR);
-//    system(g_cmd);
-//
-//    sprintf(g_cmd , "date >> %s" , FILE_ROUTE);
-//    system(g_cmd);
-//    sprintf(g_cmd , "hostname | nslookup >> %s" , FILE_ROUTE);
-//    system(g_cmd);
+    sprintf(g_cmd , "date >> %s" , FILE_ROUTE);
+    system(g_cmd);
+    sprintf(g_cmd , "hostname | nslookup >> %s" , FILE_ROUTE);
+    system(g_cmd);
 
     while(1){
         /* find a space that can add new member */
@@ -386,7 +383,7 @@ void cmd_thread(void){
             printf("client num:%d max:%d\n" , online , CLIENTNUM-1);
             for(i=0;i<CLIENTNUM;i++){
                 if(client[i].fd!=-1){
-                    printf("client[%d] %s fd=%d\n" , i , client[i].name , client[i].fd);
+                    printf("client[%d] fd=%d %s\n" , i , client[i].fd, client[i].name);
                 }
             }
         }
