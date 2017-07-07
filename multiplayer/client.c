@@ -137,7 +137,7 @@ int main(){
     combsend(svr_fd , send_str , sizeof(send_str) , "name %s" , cur_id);
 
     // build history data
-    if(chdir(LOG_DIR)){
+    if(chdir(LOG_DIR)){ //try to change dir to LOG_DIR
         puts("will make directory in current directory...");
         if(mkdir(LOG_DIR , 0770))
             printf("make directory[%s] failed\n" , LOG_DIR) , exit(0);

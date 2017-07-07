@@ -53,7 +53,7 @@ void time_log(void);
 /* start main program */
 int main(void){
 
-    if(chdir(LOG_DIR)){
+    if(chdir(LOG_DIR)){// try to change dir to LOG_DIR
         puts("will make directory in current directory...");
         if(mkdir(LOG_DIR , 0770))
             printf("make directory[%s] failed\n" , LOG_DIR) , exit(0);
