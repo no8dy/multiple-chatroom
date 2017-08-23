@@ -894,14 +894,14 @@ void rootmod(void){
             if(rootinput == '\n' || rootinput == '\r'){
                 if(opt == 1){//change ID as root
                     if(rootID == 0){
-                        rootID = 1-rootID;
+                        rootID = !rootID;
                         strcpy(cur_id , "root");
                         combsend(svr_fd , send_str , sizeof(send_str) , "%s %s" , CH_IDNTY , "root");
                     }
                     else if(rootID == 1){
-                        rootID = 1-rootID;
+                        rootID = !rootID;
                         strcpy(cur_id , my_id);
-                        combsend(svr_fd , send_str , sizeof(send_str) , "%s %s" , CH_IDNTY , "old");
+                        combsend(svr_fd , send_str , sizeof(send_str) , "%s %s" , CH_IDNTY , my_id);
                     }
                     mvwprintw(rbox , 1 , 5 , "Change ID as         ");//%*c" , sizeof(my_id) , ' ');
                     mvwprintw(rbox , 8 , 9 , "Cur_ID:         ");//" , sizeof(changename) , ' ');
