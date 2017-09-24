@@ -98,7 +98,6 @@ int main(void){
     //build history data
     time_log();
     puts("logged");
-    combsys(g_cmd , sizeof(g_cmd) , "hostname | nslookup >> %s" , FILENAME);
 
     while(1){
         /* find a space that can add new member */
