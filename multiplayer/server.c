@@ -111,7 +111,8 @@ int main(void){
         len = sizeof(client_addr);
         client[i].fd = accept(sockfd , (struct sockaddr*)&client_addr , &len);
         if(online==CLIENTNUM - 1){
-            combsend(client[i].fd , g_sd_str , sizeof(g_sd_str) , "%s No space in chatroom" , SYST_MSG);
+            combsend(client[i].fd , g_sd_str , sizeof(g_sd_str) ,
+                    "%s No space in chatroom" , SYST_MSG);
             close(client[i].fd) , client[i].fd = -1;
         }
         else{
@@ -167,7 +168,7 @@ void writeto(char *sender , char *receiver , char *str){
 }
 
 void member_ctrl(char *mod , char *name){
-    int i , j , man_loc;
+    int i , man_loc;
     name = trim(name);
     for(man_loc = 0 ; man_loc < CLIENTNUM ; man_loc++)
         if(!strcmp(client[man_loc].name , name)) break;
@@ -225,7 +226,7 @@ void close_server(void){
 
 void recv_msg(void *num){
     int endsub = 0 , idx = *((int*)num) , len , i;
-    char msg_str[310] , g_cmd[10] , man[20] , string[320]= "" , g_sd_str[30];
+    char msg_str[310] , g_cmd[10] , man[20] ,  g_sd_str[30];
 
     online++;
 
@@ -234,6 +235,8 @@ void recv_msg(void *num){
     while(1){
         /* record history */
         auto_save();
+        memset(msg_str , '\0' , sizeof(msg_str));
+        /* will appear bug on strcmp if without memset */
         len = recv(client[idx].fd , msg_str , sizeof(msg_str) , 0);
         if(!len){
             printf("client[%d] connection break\n" , idx);
@@ -243,9 +246,10 @@ void recv_msg(void *num){
         }
         else if(len > 0){
             int readed = 0 , ch_cnt = 0;
-            g_cmd[0] = '\0';//tricky
+            memset(g_cmd , '\0' , sizeof(g_cmd));
             sscanf(msg_str , "%s%n" , g_cmd , &readed);
             printf("recv command [%s] from %d\n" , msg_str , idx);
+
             if(!strcmp(g_cmd , PUBC_MSG)){
                 wall(client[idx].curname , msg_str + readed);
             }
@@ -273,10 +277,12 @@ void recv_msg(void *num){
             }
             else if(!strcmp(g_cmd , HIDE_SLF)){
                 sprintf(g_sd_str , "%s %s" , RMV_LIST , client[idx].name);
+                puts(g_sd_str);
                 send_cmd_all(g_sd_str , sizeof(g_sd_str) , idx);
             }
             else if(!strcmp(g_cmd , U_HD_SLF)){
                 sprintf(g_sd_str , "%s %s" , ADD_LIST , client[idx].name);
+                puts(g_sd_str);
                 send_cmd_all(g_sd_str , sizeof(g_sd_str) , idx);
             }
             else if(!strcmp(g_cmd , HIDE_ROT)){

@@ -26,27 +26,29 @@
 #include<stdarg.h>
 struct stat route;
 void storehistory(void);
-char command[250] , send_str[250];//350 error
+char command[250] , send_str[250];
 char fileroute[40];
 
 //var for socket
 struct clientinfo {
     int hold;
     char name[10];
-} clt[CLIENTNUM+1] = {	[1 ... CLIENTNUM] = { .hold = 0 } , [0] = { .hold = 1 , .name = "All"	} };
+} clt[CLIENTNUM+1] = {
+    [1 ... CLIENTNUM] = { .hold = 0 } ,
+    [0] = { .hold = 1 , .name = "All"	}
+};
+
 /* GNU style struct initialization */
 //   v one for "All"
 int mbr_ls[ CLIENTNUM + 1 ] = {[ 0 ] = 0};//point client array (sorted)
 int online = 0;//the num people on line
-char my_id[11];
-char cur_id[20];
+char my_id[11] , cur_id[20];
 char recvr_n[11] = { "All" };
-int svr_fd;
-int clt_fd;
+int svr_fd , clt_fd;
 int PORT;
 char IP[25];
-int ch;
 int root = 0;// whether you have root competence
+
 ///function for socket
 void recv_msg(void);
 void escape(int a);
@@ -83,8 +85,8 @@ int tbox_t = 0;//for talk box
 int curline = 0;//for history
 int tbox_c = 0;//for talk bodx
 int x , y;
-int new = 1;
 char ps = '$';//$(normal) >(just good) #(root)
+
 //function for curses
 void initial(void);
 void mvwWipen(WINDOW *awin , int y , int x , int n);
@@ -103,8 +105,6 @@ char omitstr[15];
 
 //start main program
 int main(){
-    char output[17];
-    char stroutput[300];
     signal(SIGINT , escape);
     int i;
     strcpy(my_id , "nobody");
@@ -154,7 +154,6 @@ int main(){
     combfw(command , sizeof(command) , "connected to %s:%d\n" ,IP , PORT);
 
     // start curses terminal
-    int hch;//rbox ch for getch
     initial();
 
     /*   bbox                    | mbox                  */
@@ -181,10 +180,8 @@ int main(){
 
     for(i = 0 ; i < 7 ; i++)
         if(win[i] == NULL) puts("NULL") , exit(1);
-    keypad(tbox , TRUE);
-    keypad(ibox , TRUE);
-    keypad(mbox , TRUE);
-    keypad(bbox , TRUE);
+    for(i = 0 ; i < 4 ; i++)
+        keypad(win[i] , TRUE);
     keypad(rbox , TRUE);
 
     wsetscrreg(tbox , 0 , 299);
@@ -217,9 +214,15 @@ int main(){
         }
         if(string[0]!= '\0'){
             if(!strcmp(recvr_n , "All"))
-                combsend(svr_fd , send_str , sizeof(send_str) , "%s %s" , PUBC_MSG , string);
+                combsend(svr_fd , send_str ,
+                        sizeof(send_str) ,
+                        "%s %s" , PUBC_MSG ,
+                        string);
             else
-                combsend(svr_fd , send_str , sizeof(send_str) , "%s %s %s" , PRVT_MSG , recvr_n , string);
+                combsend(svr_fd , send_str ,
+                        sizeof(send_str) ,
+                        "%s %s %s" , PRVT_MSG ,
+                        recvr_n , string);
         }
         memset(string , 0 , sizeof(string));
         wclear(ibox);
@@ -230,20 +233,16 @@ int main(){
     return 0;
 }
 
-void escape(int a){
+void escape(int idx){
+    char exit_msg[3][25] = {
+        "Exit chatroom" ,
+        "connection break" ,
+        "server terminated" ,
+    };
     endwin();
     close(svr_fd);
-    if(a == 0){
-        puts("Exit chatroom");
-    }
-    else if(a == 1){
-        puts("connection break");
-    }
-    else if(a == 2){
-        puts("recvmsg break;");
-    }
+    puts(exit_msg[idx]);
     exit(0);
-    return;
 }
 
 void recv_msg(void){
@@ -272,7 +271,6 @@ void recv_msg(void){
                 sprintf(output , "%s" , string);
             }
             else if(!strcmp(mod , TRYTO_SU)){
-                //puts(string);
                 sscanf(recv_str + readed  , "%[^\n]" , string);
                 if(!strcmp(trim(string) , SU_ST_AC)){
                     root = 1;
@@ -296,22 +294,16 @@ void recv_msg(void){
             else if(strcmp(mod , ADD_LIST) == 0){
                 while(~sscanf(recv_str + readed  , "%s%n" , sendername , &ch_cnt))
                     readed +=  ch_cnt , memberctrl(ADD_LIST , sendername);
-                //usleep(10000);
-                //sleep(1);
                 continue;
             }
             else if(strcmp(mod , RMV_LIST) == 0){
                 sscanf(recv_str + readed  , "%s" , sendername);
                 memberctrl(RMV_LIST , sendername);
-                //usleep(10000);
                 continue;
             }
-            if(tbox->_curx == 0){
-                mvwaddstr(tbox , tbox_c , 0 , output);
-            }
-            else{
-                mvwaddstr(tbox , tbox_c , 0 , output);
-            }
+
+
+            mvwaddstr(tbox , tbox_c , 0 , output);
             if(curline == 300){
                 for(i = 0;i<300;i++){
                     combfw(command , sizeof(command) , "%s\n" , history[i]);
@@ -340,15 +332,11 @@ void recv_msg(void){
             usleep(10000);
             redraw(1);
         }
-        else{
-            //    puts("err");
-        }
     }
     return;
 }
 void memberctrl(char *mod , char *name){
     int i , j;
-    int namelen = strlen(name);
     while(win_c == mbox){
         sleep(1);
     }
@@ -405,17 +393,9 @@ int cnt_host(void){
     struct sockaddr_in dest0;
     /* input IP */
 
-    printf("Input IP\n(ghsot = >ghost.cs.nccu.edu.tw)\n(cherry = >cherry.cs.nccu.edu.tw)\n(enter = >local):");
+    printf("IP(default:localhost):");
     fgets(IP , sizeof(IP) , stdin);
-    if(IP[0] == '\n'){
-        sprintf(IP , "127.0.0.1");
-    }
-    if(strcmp(IP , "ghost\n") == 0){
-        strcpy(IP , "140.119.162.225");
-    }
-    if(strcmp(IP , "cherry\n") == 0){
-        strcpy(IP , "140.119.162.51");
-    }
+    if(IP[0] == '\n') sprintf(IP , "127.0.0.1");
     setbuf(stdin , NULL);
     printf("will connect to %s\n" , IP);
     /* input port */
@@ -637,28 +617,11 @@ int terminal(WINDOW *twin , char *str , int n){
             wrefresh(ibox);
 
         }
-        else if(c == 14){//
-            if(ps == '$'){
-                ps = '>';
-            }
-            else if(ps == '>'){
-                ps = '@';
-            }
-            else if(ps == '@'){
-                ps = '!';
-            }
-            else if(ps == '!'){
-                ps = '%';
-            }
-            else if(ps == '%'){
-                ps = '?';
-            }
-            else if(ps == '?'){
-                ps = '$';
-            }
+        else if(c == 14){
+            char psn[] = "$>@!%?$";
+            ps = psn[(strchr(psn , ps) - psn + 1) % strlen(psn)];
             mvwprintw(pbox , 1 , 0 , "%c" , ps);
             wrefresh(pbox);
-
         }
         else if(c == KEY_UP || c == KEY_DOWN || c ==  KEY_LEFT || c ==  KEY_UP){
             if(c == KEY_UP){
@@ -725,10 +688,10 @@ void membermod(char *name){
     static int mbr_c = 0;//cursor for member
     win_c = mbox;
     if(clt[mbr_ls[mbr_c]].name[0]  ==  '\0')
-        mbr_c--;/*avoid the user being removed , s.t. point nothing */
+        mbr_c--;
+    /*avoid the user being removed , s.t. point nothing */
     mvwprintw(win_c , mbr_c - mbox_t , 2 , "%c" , ps);
     mvwAttrw(win_c , mbr_c - mbox_t , 4 , A_REVERSE , omit_id(clt[mbr_ls[mbr_c]].name));
-    //	mvwAttrw(A_REVERSE , win_c , mbr_c-mbox_t , 4 , omit_id(clt[mbr_ls[mbr_c]].name));
     wrefresh(win_c);
     while(1){
         input = getch();
@@ -736,10 +699,7 @@ void membermod(char *name){
         if(input == '\r' || input == '\n'){
             strcpy(name , clt[mbr_ls[mbr_c]].name);
             mvwWipen(wbox , 0 , 0 , 10);
-            //mvwprintw(wbox , 0 , 0 , "          ");
             mvwAttrw(wbox , 0 , 10 - strlen(name) , A_BOLD , " To %s" , name);
-            //			mvwAttrw(A_BOLD , wbox , 0 , 10-strlen(name) , " To ");
-            //			mvwAttrw(A_BOLD , wbox , 0 , 14-strlen(name) , name);
             wrefresh(wbox);
             mvwprintw(win_c , mbr_c-mbox_t , 4 , "%s" , omit_id(clt[mbr_ls[mbr_c]].name));
             break;
@@ -767,8 +727,9 @@ void membermod(char *name){
                 mbox_t++;
                 wscrl(win_c , 1);
             }
-            mvwAttrw(win_c , mbr_c - mbox_t , 4 , A_REVERSE , omit_id(clt[mbr_ls[mbr_c]].name));
-            //			mvwAttrw(A_REVERSE , win_c , mbr_c-mbox_t , 4 , omit_id(clt[mbr_ls[mbr_c]].name));
+            mvwAttrw(win_c , mbr_c - mbox_t , 4 , A_REVERSE ,
+                    omit_id(clt[mbr_ls[mbr_c]].name));
+
             mvwprintw(win_c , mbr_c-mbox_t , 2 , "%c" , ps);
         }
         if(mbox_t<(online-(LINES-6))){
@@ -813,14 +774,10 @@ void selectmod(void){
         }
         else{
             if(input == KEY_UP){
-                if(selecter>1){
-                    selecter--;
-                }
+                selecter -= selecter > 1;
             }
             else if(input == KEY_DOWN){
-                if(selecter<4){
-                    selecter++;
-                }
+                selecter += selecter < 4;
             }
             else if(input == 12){
                 rootmod();
@@ -832,12 +789,10 @@ void selectmod(void){
     }
     return;
 }
+
 void rootmod(void){
-    int opt = 1; //option
-    char pw[20];
-    char output[25];
-    char kickname[20];
-    int rootinput;
+    int opt = 1 , rootinput;
+    char pw[20] , output[25] , kickname[20];
     static int hide = 0;
     static int hideroot = 1;
     static int rootID = 0;
@@ -894,52 +849,42 @@ void rootmod(void){
             if(rootinput == '\n' || rootinput == '\r'){
                 if(opt == 1){//change ID as root
                     if(rootID == 0){
-                        rootID = 1-rootID;
+                        rootID = !rootID;
                         strcpy(cur_id , "root");
-                        combsend(svr_fd , send_str , sizeof(send_str) , "%s %s" , CH_IDNTY , "root");
+                        combsend(svr_fd , send_str , sizeof(send_str) ,
+                                "%s %s" , CH_IDNTY , "root");
                     }
                     else if(rootID == 1){
-                        rootID = 1-rootID;
+                        rootID = !rootID;
                         strcpy(cur_id , my_id);
                         combsend(svr_fd , send_str , sizeof(send_str) , "%s %s" , CH_IDNTY , "old");
                     }
-                    mvwprintw(rbox , 1 , 5 , "Change ID as         ");//%*c" , sizeof(my_id) , ' ');
-                    mvwprintw(rbox , 8 , 9 , "Cur_ID:         ");//" , sizeof(changename) , ' ');
-                    mvwprintw(rbox , 1 , 5 , "Change ID as %s" , strcmp(cur_id , my_id) == 0?"root":my_id);
+                    mvwprintw(rbox , 1 , 5 , "Change ID as         ");
+                    mvwprintw(rbox , 8 , 9 , "Cur_ID:         ");
+                    mvwprintw(rbox , 1 , 5 , "Change ID as %s" ,
+                            strcmp(cur_id , my_id) == 0?"root":my_id);
                     mvwprintw(rbox , 8 , 9 , "Cur_ID:%s" , cur_id);
                     mvwprintw(bbox , 0 , 4 , "Hi!");
                     mvwWipen(bbox , 0 , 7 , 10);
-                    //mvwprintw(bbox , 0 , 7 , "          ");
                     mvwAttrw(bbox , 0 , 7 , A_BOLD , cur_id);
-                    //mvwAttrw(A_BOLD , bbox , 0 , 7 , cur_id);
                     wrefresh(bbox);
                     wrefresh(rbox);
                 }
                 else if(opt == 2){
-                    if(hide == 0){
-                        hide = 1-hide;
-                        send(svr_fd , HIDE_SLF , sizeof(HIDE_SLF) , 0);
-                        mvwprintw(rbox , 2 , 5 , "Show my ID");
-                    }
-                    else if(hide == 1){
-                        hide = 1-hide;
-                        send(svr_fd , U_HD_SLF , sizeof(U_HD_SLF) , 0);
-                        mvwprintw(rbox , 2 , 5 , "Hide my ID");
-                    }
+                    hide = !hide;
+                    char *status = (hide ? HIDE_SLF : U_HD_SLF);
+                    send(svr_fd , status , strlen(status) , 0);
+                    mvwprintw(rbox , 2 , 5 ,
+                            hide ? "Hide my ID" : "Show my ID");
                 }
                 else if(opt == 3){
-                    if(hideroot == 0){
-                        hideroot = 1-hideroot;
-                        send(svr_fd , HIDE_ROT , sizeof(HIDE_ROT) , 0);
-                        mvwprintw(rbox , 3 , 5 , "Show root ID");
-                    }
-                    else if(hideroot == 1){
-                        hideroot = 1-hideroot;
-                        send(svr_fd , U_HD_ROT , sizeof(U_HD_ROT) , 0);
-                        mvwprintw(rbox , 3 , 5 , "Hide root ID");
-                        touchwin(rbox);
-                        wrefresh(rbox);
-                    }
+                    hideroot = !hideroot;
+                    char *status = (hideroot ? HIDE_ROT : U_HD_ROT);
+                    send(svr_fd , status , strlen(status) , 0);
+                    mvwprintw(rbox , 3 , 5 ,
+                            hideroot ? "Hide root ID" : "Show root ID");
+                    touchwin(rbox);
+                    wrefresh(rbox);
 
                 }
                 else if(opt == 4){
@@ -966,7 +911,6 @@ void rootmod(void){
                     ps = '$';
                     root = 0;
                     mvwWipen(bbox , 0 , 20 , 13);
-                    //mvwprintw(bbox , 0 , 20 , "             ");
                     break;
                 }
                 else if(opt == 7){//exit rootmod
