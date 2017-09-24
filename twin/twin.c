@@ -89,7 +89,7 @@ int main(void){
 
 	int hch;//helpwin ch for getch
 
-	initial();	
+	initial();
 
 	win[0]=newwin(300,COLS-1,0,0); // set communication box
 	win[1]=newwin(5,COLS-2,LINES-5,0); // set insert line
@@ -118,8 +118,7 @@ int main(void){
 	for(i=0;i<=(LINES-1)*COLS;i++){
 		string[i]='\0';
 	}
-	
-//	refresh();
+
 	wmove(curwin,1,0);
 	mvwaddstr(curwin,1,0,"enter to insert");
 	wrefresh(win[1]);
@@ -138,7 +137,7 @@ int main(void){
 				wrefresh(win[1]);
 				break;
 			case 'k':
-			case 'K':	
+			case 'K':
 			case KEY_UP:
 				if(topline!=0){
 					wscrl(win[0],-1);
@@ -160,7 +159,7 @@ int main(void){
 					wrefresh(win[0]);
 					touchwin(win[1]);
 					wrefresh(win[1]);
-					topline++;	
+					topline++;
 					localine--;
 				}
 				break;
@@ -187,13 +186,9 @@ int main(void){
 					strcpy(history[curline],stringout);
 
 					write(sockfd, string, strlen(string)+1);
-					
-					if(strlen(stringout)%(COLS-2)==0){//set newline
-						new=0;						  //location
-					}
-					else{
-						new=1;
-					}
+
+					new = strlen(stringout)%(COLS-2) != 0;
+                    //set newline location
 
 					localine+=((strlen(stringout)/(COLS-3))+new);//new line
 
@@ -211,7 +206,7 @@ int main(void){
 
 				for(i=0;i<COLS-1;i++) // draw region of box and line
 					mvwaddch(win[1],0,i,'-');
-				
+
 				mvwaddstr(win[1],0,0,myname);
 				mvwaddstr(curwin,1,0,"enter to insert");
 				wrefresh(win[0]);
@@ -220,7 +215,7 @@ int main(void){
 				break;
 			case 8:
 			case 127:
-			case 263://	backspace	
+			case 263://	backspace
                 break;
 			case 27:
 				escape(0);
@@ -237,9 +232,7 @@ int main(void){
 
 void recemsg(void){
 	char string[300]={'\0'};
-	int len;
-	int i;
-	int inserty,insertx;
+	int i , len , inserty , insertx;
 
 	while(1){
 		len = read(sockfd, buffer0, sizeof(buffer0));
@@ -260,7 +253,7 @@ void recemsg(void){
 				mvwaddstr(win[0],localine,0,string);
 
 				strcpy(history[curline],string);
-					
+
 				if(strlen(string)%(COLS-2)==0){//set newline
 					new=0;		//location
 				}
@@ -279,13 +272,13 @@ void recemsg(void){
 				}
 				for(i=0;i<COLS-1;i++) // draw region of box and line
 					mvwaddch(win[1],0,i,'-');
-			
+
 				mvwaddstr(win[1],0,0,myname);
-				wmove(win[1],inserty,insertx);				
+				wmove(win[1],inserty,insertx);
 				wrefresh(win[0]);
 				touchwin(win[1]);
 				wrefresh(win[1]);
-			}	
+			}
 		}
 	}
 	return;
@@ -330,7 +323,7 @@ void sermission(void){
 
 	struct sockaddr_in dest1;
 
-	// input port 
+	// input port
 	printf("Input port(ex:8889):");
 	scanf("%d",&PORT);
 
