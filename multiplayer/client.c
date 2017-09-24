@@ -857,7 +857,7 @@ void rootmod(void){
                     else if(rootID == 1){
                         rootID = !rootID;
                         strcpy(cur_id , my_id);
-                        combsend(svr_fd , send_str , sizeof(send_str) , "%s %s" , CH_IDNTY , "old");
+                        combsend(svr_fd , send_str , sizeof(send_str) , "%s %s" , CH_IDNTY , my_id);
                     }
                     mvwprintw(rbox , 1 , 5 , "Change ID as         ");
                     mvwprintw(rbox , 8 , 9 , "Cur_ID:         ");
